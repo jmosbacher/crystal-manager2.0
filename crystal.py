@@ -35,21 +35,14 @@ class Crystal(HasTraits):
     desc = Str('Description')
     notes =Str('Notes...')
 
-
-    experiments = List(BaseExperiment)
-    selected = Instance(BaseExperiment)
-
     #####       Data      #####
 
 
     #####       Flags      #####
     is_selected = Bool(False)
-    has_experiments = Property()
+
 
     #####       Info      #####
-    ex_wl_range = Property(Tuple)
-    em_wl_range = Property(Tuple)
-    experiment_cnt = Property(Int)
 
     #####       UI      #####
     add_type = Enum(['Spectrum', 'Raman', 'Anealing'])
@@ -61,62 +54,10 @@ class Crystal(HasTraits):
     plot_selected = Button('Plot')
     merge = Button('Merge')
     #import_exp = Button('Import Experiment')
-    comp_sel = Button('Compare selected')
-    plot_1d = Button('Plot 1D')
-    plot_2d = Button('Plot 2D')
-    plot_3d = Button('Plot 3D')
 
     #####       Visualization     #####
     kind = Enum('Spectrum',['Spectrum', 'Raman'])
     alpha = Float(0.6)
-
-    #####       GUI View     #####
-    view = View(
-        VSplit(
-            VGroup(
-
-                HGroup(
-                    Item(name='select_all', show_label=False),
-                    Item(name='unselect_all', show_label=False),
-                    Item(name='remove', show_label=False, enabled_when='selected'),
-                    Item(name='merge', show_label=False),
-
-                    Item(name='comp_sel', show_label=False, enabled_when='selected'),
-                    # Item(name='add_type', show_label=False),
-                    Item(name='add_exp', show_label=False),
-
-                show_border=True, label='Experiments'),
-                Item(name='experiments', show_label=False, editor=ExperimentTableEditor(selected='selected')),
-                HGroup(
-                    #Item(name='kind', show_label=False, enabled_when='selected'),
-                    Item(name='alpha', label='Transparency', enabled_when='selected'),
-                    Item(name='plot_1d', show_label=False, enabled_when='selected'),
-                    Item(name='plot_2d', show_label=False, enabled_when='selected'),
-                    Item(name='plot_3d', show_label=False, enabled_when='selected'),
-                    show_border=True, label='Visualization'),
-            ),
-
-        VGroup(
-
-            Group(
-                Item(name='selected', style='custom', show_label=False),
-
-            ),
-
-                show_border=True, label='Selected'),
-
-        ),
-
-        title='Crystal Editor',
-        buttons=['OK'],
-        kind='nonmodal',
-        scrollable=True,
-        resizable=True,
-        height=800,
-        width=1280,
-
-    )
-
 
 
 class CrystalTableEditor(TableEditor):

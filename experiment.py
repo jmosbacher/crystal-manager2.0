@@ -234,7 +234,7 @@ class SpectrumExperiment(BaseExperiment):
             self.measurements.remove(meas)
         main.is_selected = False
 
-    def add_new(self):
+    def add_measurement(self):
         new = SpectrumMeasurement(main=self.main)
         self.measurements.append(new)
         self.selected = new

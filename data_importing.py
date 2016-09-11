@@ -146,7 +146,7 @@ class AutoExperimentImportTool(AutoImportToolBase):
             experiment.name = f_name
             experiment.crystal_name = '_'.join(f_name.split('_')[1:3])
             for name, data in org_data.items():
-                new = experiment.add_new()
+                new = experiment.add_measurement()
                 new.name = name
                 try:
                     ex_wl = eval(name.split('in')[0])
@@ -161,3 +161,16 @@ class AutoExperimentImportTool(AutoImportToolBase):
                 new.file_data['sig'] = data.get('sig', ([], []))[1]
                 new.file_data['bgd'] = data.get('bgd', ([], []))[1]
                 new.file_data['ref'] = data.get('ref', ([], []))[1]
+
+                for line in new.file_data['sig']:
+                    if 'Exposure Time (secs)' in line:
+                        t = eval(line.split(':')[1].strip())
+                        if isinstance(t, (float, int)):
+                            new.exposure = t
+
+                    if 'Number of Accumulations' in line:
+                        t = eval(line.split(':')[1].strip())
+                        if isinstance(t, (float, int)):
+                            new.frames = t
+
+

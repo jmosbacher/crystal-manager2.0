@@ -80,6 +80,7 @@ class SpectrumMeasurement(BaseMeasurement):
     em_wl = Tuple((0.0, 0.0), cols=2, labels=['Min', 'Max'])  # Emission Wavelength
 
     exposure = Int(1)
+    frames = Int(1)
     e_per_count = Int(1)  # electrons per ADC count
 
     #####       Extracted Data      #####
