@@ -90,6 +90,35 @@ class AutoImportToolBase(HasTraits):
     def import_data(self, group):
         raise NotImplementedError
 
+    def store_meas(self,experiment,data,name):
+        new = experiment.add_measurement()
+        new.name = name
+        try:
+            ex_wl = eval(name.split('in')[0])
+            if isinstance(ex_wl, (float, int)):
+                new.ex_wl = ex_wl
+        except:
+            pass
+        new.signal = data.get('sig', ([], []))[0]
+        new.bg = data.get('bgd', ([], []))[0]
+        new.ref = data.get('ref', ([], []))[0]
+        new.file_data = {}
+        new.file_data['sig'] = data.get('sig', ([], []))[1]
+        new.file_data['bgd'] = data.get('bgd', ([], []))[1]
+        new.file_data['ref'] = data.get('ref', ([], []))[1]
+
+        for line in new.file_data['sig']:
+            if 'Exposure Time (secs)' in line:
+                t = eval(line.split(':')[1].strip())
+                if isinstance(t, (float, int)):
+                    new.exposure = t
+
+            if 'Number of Accumulations' in line:
+                t = eval(line.split(':')[1].strip())
+                if isinstance(t, (float, int)):
+                    new.frames = t
+
+
 class AutoSpectrumImportTool(AutoImportToolBase):
     def __init__(self, experiment):
         HasTraits.__init__(self)
@@ -103,23 +132,11 @@ class AutoSpectrumImportTool(AutoImportToolBase):
         org_data = import_group(self.selector.dir,group,delimiter=self.delimiter)
         return org_data
 
+
     def store_data(self, org_data):
         for name, data in org_data.items():
-            new = self.experiment.add_new()
-            new.name = name
-            try:
-                ex_wl = eval(name.split('in')[0])
-                if isinstance(ex_wl, (float, int)):
-                    new.ex_wl = ex_wl
-            except:
-                pass
-            new.signal = data.get('sig', ([], []))[0]
-            new.bg = data.get('bgd', ([], []))[0]
-            new.ref = data.get('ref', ([], []))[0]
-            new.file_data = {}
-            new.file_data['sig'] = data.get('sig', ([], []))[1]
-            new.file_data['bgd'] = data.get('bgd', ([], []))[1]
-            new.file_data['ref'] = data.get('ref', ([], []))[1]
+            self.store_meas(self.experiment,data,name)
+
 
 
 class AutoExperimentImportTool(AutoImportToolBase):
@@ -146,31 +163,5 @@ class AutoExperimentImportTool(AutoImportToolBase):
             experiment.name = f_name
             experiment.crystal_name = '_'.join(f_name.split('_')[1:3])
             for name, data in org_data.items():
-                new = experiment.add_measurement()
-                new.name = name
-                try:
-                    ex_wl = eval(name.split('in')[0])
-                    if isinstance(ex_wl, (float, int)):
-                        new.ex_wl = ex_wl
-                except:
-                    pass
-                new.signal = data.get('sig',([],[]))[0]
-                new.bg = data.get('bgd', ([],[]))[0]
-                new.ref = data.get('ref', ([],[]))[0]
-                new.file_data = {}
-                new.file_data['sig'] = data.get('sig', ([], []))[1]
-                new.file_data['bgd'] = data.get('bgd', ([], []))[1]
-                new.file_data['ref'] = data.get('ref', ([], []))[1]
-
-                for line in new.file_data['sig']:
-                    if 'Exposure Time (secs)' in line:
-                        t = eval(line.split(':')[1].strip())
-                        if isinstance(t, (float, int)):
-                            new.exposure = t
-
-                    if 'Number of Accumulations' in line:
-                        t = eval(line.split(':')[1].strip())
-                        if isinstance(t, (float, int)):
-                            new.frames = t
-
+                self.store_meas(experiment, data, name)
 
