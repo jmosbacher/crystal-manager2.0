@@ -11,11 +11,12 @@ import matplotlib.cm as cmx
 import numpy as np
 import random
 import pandas as pd
-from file_selector import FileSelectionTool, FolderSelectionTool
+from file_selector import FileSelectionTool, FolderSelectionTool, SelectionToolBase
 from measurement import SpectrumMeasurement, BaseMeasurement
 from auxilary_functions import color_map, wl_to_rgb, organize_data, read_ascii_file,import_group, import_folder
 #from crystal import Crystal
 from pyface.api import confirm, error, YES, CANCEL
+from datetime import datetime
 try:
     import cPickle as pickle
 except:
@@ -27,7 +28,7 @@ class AutoImportToolHandler(Handler):
     def import_data(self,info,group):
         org_data = info.object.import_data(group)
         if org_data is not None:
-            if len(org_data):
+            if len(org_data.keys()):
                 code = confirm(info.ui.control, 'Data imported successfully, continue importing? Press Cancel to discard data',
                                title="Import more data?", cancel=True)
 
@@ -45,14 +46,13 @@ class AutoImportToolHandler(Handler):
     def object_import_all_changed(self,info):
         self.import_data(info,info.object.selector.filtered_names)
 
-
-    def import_selected_changed(self,info):
+    def object_import_selected_changed(self,info):
         self.import_data(info,info.object.selector.selected)
 
 
 class AutoImportToolBase(HasTraits):
     experiment = Any() #Instance(Crystal)
-    selector = Instance(FileSelectionTool)
+    selector = Instance(SelectionToolBase)
     delimiter = Str(' ')
     data_folder = Str('ascii')
     #mode = Enum(['New Measurement', 'Append to Selected'])
@@ -115,8 +115,16 @@ class AutoImportToolBase(HasTraits):
 
             if 'Number of Accumulations' in line:
                 t = eval(line.split(':')[1].strip())
-                if isinstance(t, (float, int)):
+                if isinstance(t,  int):
                     new.frames = t
+
+            if 'Date and Time' in line:
+                try:
+                    date_time = datetime.strptime(line.split(': ')[1].strip(), '%a %b %d %X %Y')
+                    new.date = date_time.date()
+                    new.time = date_time.time()
+                except:
+                    pass
 
 
 class AutoSpectrumImportTool(AutoImportToolBase):
@@ -131,7 +139,6 @@ class AutoSpectrumImportTool(AutoImportToolBase):
     def import_data(self, group):
         org_data = import_group(self.selector.dir,group,delimiter=self.delimiter)
         return org_data
-
 
     def store_data(self, org_data):
         for name, data in org_data.items():
@@ -153,13 +160,13 @@ class AutoExperimentImportTool(AutoImportToolBase):
     def import_data(self, group):
         all_data = {}
         for name in group:
-            path = os.path.join(self.selector.dir,[name,self.data_folder])
+            path = os.path.join(self.selector.dir,name,self.data_folder)
             all_data[name] = import_folder(path,delimiter=self.delimiter)
         return all_data
 
     def store_data(self,all_data):
         for f_name, org_data in all_data.items():
-            experiment = self.project.add_new()
+            experiment = self.project.add_new_experiment()
             experiment.name = f_name
             experiment.crystal_name = '_'.join(f_name.split('_')[1:3])
             for name, data in org_data.items():

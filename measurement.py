@@ -2,13 +2,14 @@ import os
 from traits.api import *
 from traitsui.api import *
 from traitsui.extras.checkbox_column import CheckboxColumn
+from traitsui.ui_editors.array_view_editor import ArrayViewEditor
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-from auxilary_functions import wl_to_rgb, avg_data_array, bin_data_dict
+from auxilary_functions import wl_to_rgb, bin_data_array
 from file_selector import string_list_editor
 import numpy as np
 import random
@@ -17,6 +18,29 @@ try:
     import cPickle as pickle
 except:
     import pickle
+
+
+class ArrayViewer(HasTraits):
+
+    data = Array
+
+    view = View(
+        Item('data',
+              show_label = False,
+              editor     = ArrayViewEditor(titles = [ 'Wavelength', 'Counts' ],
+                                           format = '%.4f',
+                                           show_index= False,
+                                           # Font fails with wx in OSX;
+                                           #   see traitsui issue #13:
+                                           # font   = 'Arial 8'
+                                          )
+        ),
+        title     = 'Array Viewer',
+        width     = 0.3,
+        height    = 0.8,
+        resizable = True
+    )
+
 
 class FileDataViewer(HasTraits):
     data = Dict({'sig':[], 'bgd':[], 'ref':[]})
@@ -46,6 +70,7 @@ class BaseMeasurement(HasTraits):
     main = Any()
     name = Str('Name')
     date = Date()
+    time = Time()
     summary = Property(Str)
 
     notes = Str('')
@@ -71,7 +96,7 @@ class SpectrumMeasurement(BaseMeasurement):
     __kind__ = 'Spectrum'
 
     #####       User Input      #####
-    duration = Int(0)
+    duration = Float(0)
 
     ex_pol = Int()  # Excitation Polarization
     em_pol = Int()  # Emission Polarization
@@ -79,7 +104,7 @@ class SpectrumMeasurement(BaseMeasurement):
     ex_wl = Float()  # Excitation Wavelength
     em_wl = Tuple((0.0, 0.0), cols=2, labels=['Min', 'Max'])  # Emission Wavelength
 
-    exposure = Int(1)
+    exposure = Float(1)
     frames = Int(1)
     e_per_count = Int(1)  # electrons per ADC count
 
@@ -133,6 +158,7 @@ class SpectrumMeasurement(BaseMeasurement):
             return True
         else:
             return False
+
     def _get_color(self):
         return wl_to_rgb(self.ex_wl)
 
@@ -158,6 +184,14 @@ class SpectrumMeasurement(BaseMeasurement):
     def _bg_default(self):
         return np.array([])
 
+    def rescale(self, scale):
+        if self.has_sig:
+            self.signal[:, 1] *= scale
+        if self.has_bg:
+            self.bg[:, 1] *= scale
+        if self.has_ref:
+            self.ref[:, 1] *= scale
+
     def create_series(self):
         """
 
@@ -166,19 +200,32 @@ class SpectrumMeasurement(BaseMeasurement):
         sig = self.bin_data()
         return pd.Series(sig[:, 1], index=sig[:, 0], name=self.ex_wl)
 
+    def normalize(self,data):
+        #return data
+        normed = np.copy(data)
+        normed[:,1] = data[:,1]/(self.exposure*self.frames)
+        return normed
+
+    def norm_bg(self):
+        return self.normalize(self.bg)
+
     def bin_bg(self):
         """
 
         :return:
         """
-        binned = {}
+        binned = np.asarray([])
         if self.has_bg:
-            averaged = avg_data_array(self.bg)
-            binned = bin_data_dict(averaged)
+            normed = self.normalize(self.bg)
+            binned = bin_data_array(normed)
 
         return binned
 
+    def norm_signal(self):
+        return self.normalize(self.signal)
 
+    def norm_ref(self):
+        return self.normalize(self.ref)
 
     def bin_data(self,rem_bg=True):
         """
@@ -187,28 +234,24 @@ class SpectrumMeasurement(BaseMeasurement):
         if not self.has_sig:
             return np.zeros((1,2))
 
-        averaged = avg_data_array(self.signal)
-        binned = bin_data_dict(averaged)
+        normed = self.normalize(self.signal)
+        binned = bin_data_array(normed)
 
         if rem_bg:
-            avg_bg = self.bin_bg()
-        else:
-            avg_bg = {}
-        final = []
-        for wl, sig in binned.items():
-            final.append([wl, sig-avg_bg.get(wl,0.0)])
+            bg = self.bin_bg()
+            binned[:,1] -=  bg[:,1]
+
         # print sorted(averaged)
 
-        return np.array(sorted(final))
+        return binned
 
-    def integrate_range(self,min,max):
-        signal = self.bin_data()
-        in_range = []
-        for wl,sig in signal:
-            if wl<=max and wl>=min:
-                in_range.append(sig)
-        result = np.sum(in_range)
-        return result
+    def integrate_range(self,l,r):
+        signal = self.norm_signal()
+        bgnd = self.norm_bg()
+
+        sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
+        bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
+        return sig-bg
 
 
     def plot_data(self,ax=None,legend=True):
@@ -218,6 +261,7 @@ class SpectrumMeasurement(BaseMeasurement):
             if ax is not None:
                 ax.set_xlabel('Emission Wavelength')
                 ax.set_ylabel('Counts')
+                plt.show()
             else:
                 plt.show()
 

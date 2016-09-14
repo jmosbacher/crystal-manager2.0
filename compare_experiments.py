@@ -8,8 +8,9 @@ from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-from auxilary_functions import wl_to_rgb
+from auxilary_functions import wl_to_rgb, subtract_data_arrays
 from file_selector import string_list_editor
+from viewers import DictEditor
 import numpy as np
 import random
 import pandas as pd
@@ -119,44 +120,17 @@ class ExperimentComparison(HasTraits):
                         new_meas = SpectrumMeasurement(main=self.exp1.main)
                         new_meas.ex_wl = first.ex_wl
                         new_meas.name = first.name
-                        big_signal = first.bin_data()
-                        small_signal = second.bin_data()
-                        signal = []
-                        for wl_b, cnts_b in big_signal:
-                            for wl_s, cnts_s in small_signal:
-                                if wl_b == wl_s:
-                                    signal.append([wl_b, cnts_b - cnts_s])
-                        new_meas.signal = np.array(signal)
-                        new_exp.measurements.append(new_meas)
+                        array1 = first.norm_signal()
+                        array2 = second.norm_signal()
+                        new_meas.signal = subtract_data_arrays(array1,array2)
+                        if first.has_bg and second.has_bg:
+                            new_meas.bg = subtract_data_arrays(first.norm_bg(),second.norm_bg())
+                        if first.has_ref and second.has_ref:
+                            new_meas.ref = subtract_data_arrays(first.norm_ref(), second.norm_ref())
+                        if len(new_meas.signal):
+                            new_exp.measurements.append(new_meas)
+
         self.subtraction = new_exp
-
-
-def compare_experiments(exp1,exp2):
-    new_exp = SpectrumExperiment(main=exp1.main)
-    new_exp.name = exp1.name + ' vs ' + exp2.name
-    new_exp.crystal_name = exp1.crystal_name + ' vs ' + exp2.crystal_name
-    for first in exp1.measurements:
-        for second in exp2.measurements:
-            if first.ex_wl == second.ex_wl:
-                if first.has_sig and second.has_sig:
-                    big = first
-                    small = second
-                    if np.average(second.signal[:, 1]) > np.average(first.signal[:, 1]):
-                        big = second
-                        small = first
-                    new_meas = SpectrumMeasurement(main=exp1.main)
-                    new_meas.ex_wl = first.ex_wl
-                    new_meas.name = first.name
-                    big_signal = big.bin_data()
-                    small_signal = small.bin_data()
-                    signal = []
-                    for wl_b, cnts_b in big_signal:
-                        for wl_s, cnts_s in small_signal:
-                            if wl_b == wl_s:
-                                signal.append([wl_b, cnts_b - cnts_s])
-                    new_meas.signal = np.array(signal)
-                    new_exp.measurements.append(new_meas)
-    return new_exp
 
 
 class ExperimentListTableEditor(TableEditor):
@@ -189,9 +163,9 @@ class ExperimentListTableEditor(TableEditor):
 class AllExperimentList(HasTraits):
 
     project = Any()
-    experiments = List()
-    comparisons = DelegatesTo('project') #List()
-    selected_comp = Instance(BaseExperiment)
+    experiments = DelegatesTo('project') #List()
+    comparisons = DelegatesTo('project')
+    selected_comp = Instance(ExperimentComparison)
     selected_exp1 = Instance(BaseExperiment)
     selected_exp2 = Instance(BaseExperiment)
 
@@ -207,10 +181,14 @@ class AllExperimentList(HasTraits):
 
     #####       Visualization     #####
     plot_sel = Enum('Comparison',['First','Second', 'Subtraction','Comparison'])
-
     kind = Enum('Spectrum',['Spectrum', 'Raman'])
     alpha = Float(0.6)
 
+    #####       Integration     #####
+    integrate = Button('Integrate')
+    int_sel = Enum('Subtraction', ['First', 'Second', 'Subtraction',])
+    int_l = Float()
+    int_r = Float()
 
     view = View(
 
@@ -242,6 +220,16 @@ class AllExperimentList(HasTraits):
                 Item(name='alpha', label='Transparency', enabled_when='selected'),
                 Item(name='plot_3d', show_label=False, enabled_when='selected'),
                 show_border=True, label='Visualization'),
+
+            HGroup(
+                Item(name='int_l', label='Min', enabled_when='selected_comp'),
+                Item(name='int_r', label='Max', enabled_when='selected_comp'),
+                Item(name='int_sel', show_label=False, ),
+                Item(name='integrate', show_label=False, ),
+
+
+                spring
+            ),
             HGroup(
                 Item(name='remove_comp', show_label=False, ),
                 spring
@@ -261,9 +249,22 @@ class AllExperimentList(HasTraits):
 
     def __init__(self,project):
         self.project = project
-        #self.comparisons = project.comparisons
-        self.compile_experiment_list()
+        self.comparisons = project.comparisons
+
         HasTraits.__init__(self)
+
+
+    def _integrate_fired(self):
+        selection = {'First': self.selected_comp.exp1,
+                     'Second': self.selected_comp.exp2,
+                     'Subtraction': self.selected_comp.subtraction,
+                     }
+        measurements = selection[self.int_sel].measurements
+        int_results = {}
+        for meas in measurements:
+            int_results[meas.ex_wl] = meas.integrate_range(self.int_l,self.int_r)
+        viewer = DictEditor(int_results)
+        viewer.edit_traits()
 
     def _plot_1d_fired(self):
         selection = {'First':self.selected_comp.exp1,
@@ -299,14 +300,7 @@ class AllExperimentList(HasTraits):
         selection[self.plot_sel].plot_3d(self.alpha,self.kind,title=self.plot_title)
 
 
-    def compile_experiment_list(self):
-        for crystal in self.project.crystals:
-            for exp in crystal.experiments:
-                exp.crystal_name = crystal.name + '_' + crystal.sn
-                self.experiments.append(exp)
-
     def _compare_fired(self):
-
         comp = ExperimentComparison(exp1=self.selected_exp1,exp2=self.selected_exp2)
         comp.compare_experiments()
         self.comparisons.append(comp)

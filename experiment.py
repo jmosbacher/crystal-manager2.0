@@ -12,7 +12,7 @@ from auxilary_functions import wl_to_rgb
 import numpy as np
 import random
 import pandas as pd
-from measurement import BaseMeasurement, SpectrumMeasurement, MeasurementTableEditor
+from measurement import BaseMeasurement, SpectrumMeasurement, MeasurementTableEditor, ArrayViewer
 from data_importing import AutoSpectrumImportTool
 from auxilary_functions import merge_spectrums
 try:
@@ -60,6 +60,9 @@ class SpectrumExperiment(BaseExperiment):
     scale_what = Enum('Selected',['All','Selected'])
     rescale = Button('Rescale')
 
+    show_signal = Button('View Signal')
+    show_bg = Button('View BG')
+    show_binned = Button('View Binned')
 
     #####       Flags      #####
     is_selected = Bool(False)
@@ -87,6 +90,16 @@ class SpectrumExperiment(BaseExperiment):
                     Item(name='scale_what', show_label=False),
                     Item(name='rescale', show_label=False),
                   ),
+            HGroup(
+
+                Item(name='plot_selected', show_label=False, enabled_when='selected'),
+                Item(name='show_binned', show_label=False, enabled_when='selected'),
+                Item(name='show_signal', show_label=False, enabled_when='selected'),
+                Item(name='show_bg', show_label=False, enabled_when='selected'),
+                Item(name='show_file_data', show_label=False, enabled_when='selected'),
+
+
+            ),
             Group(
                 Item(name='measurements', show_label=False, editor=MeasurementTableEditor(selected='selected')),
                 show_border=True, label='Datasets'),
@@ -96,7 +109,7 @@ class SpectrumExperiment(BaseExperiment):
 
 
             show_border=True, label='Measurements'),
-        title='Crystal Editor',
+        title='Experiment Editor',
         buttons=['OK'],
         kind='nonmodal',
         scrollable=True,
@@ -145,29 +158,25 @@ class SpectrumExperiment(BaseExperiment):
 
     def _sort_by_wl_fired(self):
         def wl(spectrum):
-            return spectrum.ex_wl
+            return spectrum.ex_wl,spectrum.em_wl[0]
         self.measurements.sort(key=wl)
 
     def _add_meas_fired(self):
         self.import_data()
 
     def _rescale_fired(self):
-        def rescale(meas,scale):
-            if meas.has_sig:
-                meas.signal[:,1] *= scale
-            if meas.has_bg:
-                meas.bg[:, 1] *= scale
-            if meas.has_ref:
-                meas.ref[:, 1] *= scale
 
         for meas in self.measurements:
             if self.scale_what == 'All':
-                rescale(meas,self.scale)
+                meas.rescale(self.scale)
             elif self.scale_what=='Selected':
                 if meas.is_selected:
-                    rescale(meas, self.scale)
+                    meas.rescale(self.scale)
 
     def _auto_merge_fired(self):
+        def wl_key(spectrum):
+            return spectrum.ex_wl,spectrum.em_wl[0]
+
         organized = {}
         for meas in self.measurements:
             wl = meas.ex_wl
@@ -177,7 +186,7 @@ class SpectrumExperiment(BaseExperiment):
                 organized[wl] = [meas]
         for wl, measurments in organized.items():
             if len(measurments)>1:
-                self.merge_group(measurments)
+                self.merge_group(sorted(measurments,key=wl_key))
 
     def _show_file_data_fired(self):
         self.selected.show_file_data()
@@ -189,9 +198,21 @@ class SpectrumExperiment(BaseExperiment):
     def _selected_default(self):
         return SpectrumMeasurement(main=self.main)
 
+    def _show_binned_fired(self):
+        data = self.selected.bin_data()
+        view = ArrayViewer(data=data)
+        view.edit_traits()
+
+    def _show_signal_fired(self):
+        view = ArrayViewer(data=self.selected.signal)
+        view.edit_traits()
+
+    def _show_bg_fired(self):
+        view = ArrayViewer(data=self.selected.bg)
+        view.edit_traits()
+
+
     #####       Private Methods      #####
-
-
     def _edit_fired(self):
         self.selected.edit_traits()
 
@@ -216,13 +237,14 @@ class SpectrumExperiment(BaseExperiment):
             exp.is_selected = False
 
     def _merge_fired(self):
+        def wl_key(spectrum):
+            return spectrum.ex_wl,spectrum.em_wl[0]
         for_merge = []
-
         for meas in self.measurements:
             if meas.is_selected and meas.__kind__=='Spectrum':
                 for_merge.append(meas)
         if len(for_merge):
-            self.merge_group(for_merge)
+            self.merge_group(sorted(for_merge,key=wl_key))
 
 
     #####      Public Methods      #####

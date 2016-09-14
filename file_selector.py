@@ -25,7 +25,7 @@ string_list_editor = TabularEditor(
 class SelectionToolBase(HasTraits):
     file_names = List
     filtered_names = List
-    selected = List
+    selected = List([])
     dir = Directory
     filter = Str
 
@@ -36,7 +36,7 @@ class SelectionToolBase(HasTraits):
         ),
                 VGroup( Item(name='filter',label='Filter'),
                         UItem('filtered_names',
-                        editor=string_list_editor(selected   = 'selected') ),
+                        editor=string_list_editor(selected='selected') ),
                         ),
                 ),
     resizable=True,

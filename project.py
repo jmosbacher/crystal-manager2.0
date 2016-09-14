@@ -23,8 +23,8 @@ from auxilary_functions import merge_experiments
 from saving import CanSaveMixin
 from handlers import ProjectHandler
 from compare_experiments import AllExperimentList, ExperimentComparison
-from experiment import ExperimentTableEditor, SpectrumExperiment
-
+from experiment import ExperimentTableEditor, SpectrumExperiment, BaseExperiment
+from data_importing import AutoExperimentImportTool, AutoSpectrumImportTool
 class Project(CanSaveMixin):
     main = Any()
     name = Str('New Project')
@@ -41,7 +41,7 @@ class Project(CanSaveMixin):
     is_selected = Bool(False)
 
     #####       UI     #####
-    add_new = Button('New Crystal')
+    add_new = Button('New Experiment')
     #import_data = Button('Add Measurements')
     remove = Button('Remove')
     edit = Button('Open')
@@ -49,7 +49,8 @@ class Project(CanSaveMixin):
     select_all = Button('Select All')
     unselect_all = Button('Un-select All')
     compare = Button('Compare Tool')
-
+    import_folders = Button('Import Folders')
+    import_files = Button('Import Files')
 
 
     view = View(
@@ -58,6 +59,8 @@ class Project(CanSaveMixin):
                 Item(name='add_new', show_label=False),
                 Item(name='edit', show_label=False, enabled_when='selected'),
                 Item(name='compare', show_label=False),
+                Item(name='import_folders', show_label=False),
+                Item(name='import_files', show_label=False),
                 spring,
                 Item(name='select_all', show_label=False),
                 Item(name='unselect_all', show_label=False),
@@ -108,12 +111,20 @@ class Project(CanSaveMixin):
         comp.edit_traits()
 
     def _select_all_fired(self):
-        for crystal in self.crystals:
-            crystal.is_selected = True
+        for exp in self.experiments:
+            exp.is_selected = True
 
     def _unselect_all_fired(self):
-        for crystal in self.crystals:
-            crystal.is_selected = False
+        for exp in self.experiments:
+            exp.is_selected = False
+
+    def _import_files_fired(self):
+        tool = AutoSpectrumImportTool(experiment=self.selected)
+        tool.edit_traits()
+
+    def _import_folders_fired(self):
+        tool = AutoExperimentImportTool(self)
+        tool.edit_traits()
 
     def _merge_fired(self):
         for_merge = []
@@ -130,10 +141,10 @@ class Project(CanSaveMixin):
 
     def _remove_fired(self):
         if self.selected is not None:
-            self.crystals.remove(self.selected)
+            self.experiments.remove(self.selected)
 
     def add_new_experiment(self):
-        new = ExperimentComparison(main=self.main)
+        new = SpectrumExperiment(main=self.main)
         self.experiments.append(new)
         return new
 
