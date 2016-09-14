@@ -3,9 +3,11 @@ from traits.api import *
 from traitsui.api import *
 from traitsui.extras.checkbox_column import CheckboxColumn
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.colors import colorConverter
+from matplotlib.widgets import  RectangleSelector
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -29,11 +31,19 @@ class ExperimentComparison(HasTraits):
     exp2 = Instance(BaseExperiment)
     subtraction = Instance(BaseExperiment)
     has_sub = Property(Bool)
-    
+
     #####       Plots     #####
+    figure = Instance(Figure,())
     exp1_ax = Instance(Axes)
     exp2_ax = Instance(Axes)
     subtraction_ax = Instance(Axes)
+
+    def mpl_setup(self):
+        def onselect(eclick, erelease):
+            print "eclick: {}, erelease: {}".format(eclick, erelease)
+
+        self.rs = RectangleSelector(self.axes, onselect,
+                                    drawtype='box', useblit=True)
 
     def plot_1d(self,kind,title=''):
         f, axs = plt.subplots(3, sharex=True)
