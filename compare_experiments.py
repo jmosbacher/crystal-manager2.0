@@ -3,6 +3,7 @@ from traits.api import *
 from traitsui.api import *
 from traitsui.extras.checkbox_column import CheckboxColumn
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.axes import Axes
 from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
@@ -28,6 +29,11 @@ class ExperimentComparison(HasTraits):
     exp2 = Instance(BaseExperiment)
     subtraction = Instance(BaseExperiment)
     has_sub = Property(Bool)
+    
+    #####       Plots     #####
+    exp1_ax = Instance(Axes)
+    exp2_ax = Instance(Axes)
+    subtraction_ax = Instance(Axes)
 
     def plot_1d(self,kind,title=''):
         f, axs = plt.subplots(3, sharex=True)
