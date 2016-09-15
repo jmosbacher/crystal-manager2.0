@@ -27,7 +27,7 @@ from data_plot_viewers import DataPlotEditorBase
 from integration_results import IntegrationResult
 
 
-class ExperimentComparison(HasTraits):
+class ExperimentComparison(BaseExperiment):
 
     exp1 = Instance(BaseExperiment)
     exp2 = Instance(BaseExperiment)

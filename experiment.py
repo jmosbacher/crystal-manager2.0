@@ -374,7 +374,7 @@ class ExperimentTableEditor(TableEditor):
                 CheckboxColumn(name='is_selected', label='', width=0.08, horizontal_alignment='center', ),
                 ObjectColumn(name = 'name',label = 'Name',width = 0.25,horizontal_alignment = 'left',editable=True),
 
-                #ObjectColumn(name='sn', label='SN', width=0.25, horizontal_alignment='left', editable=True),
+                ObjectColumn(name='crystal_name', label='Crystal', width=0.25, horizontal_alignment='left', editable=True),
 
                 ObjectColumn(name = 'ex_wl_range',label = 'Excitation WLs',horizontal_alignment = 'center',
                              width = 0.13,editable=False),
