@@ -36,48 +36,10 @@ class ExperimentComparison(HasTraits):
 
 
 
-    view = View(
-                HSplit(
-                    VGroup(
-                        HGroup(Item(name='integrate',show_label=False, enabled_when='has_selections'),
-                               Item(name='clear', show_label=False, enabled_when='has_selections'),
-                               Item(name='refresh', show_label=False),
-                               ),
-                        Group(Item(name='display',show_label=False),
-                              show_border=True,label='Plots'),
+    def plot_1d(self,kind='Spectrum',title='',axs=None,fig=None):
+        if axs is None:
+            f, axs = plt.subplots(3, sharex=True)
 
-
-
-                ),
-
-                       VGroup()
-
-
-                )
-
-    )
-
-    def _get_has_selections(self):
-        if self.display is None:
-            return False
-        if len(self.display.selections):
-            return True
-        else:
-            return False
-
-    def _display_default(self):
-        display = DataPlotEditorBase(nplots=3)
-        #display.add_subplots(3)
-        return display
-
-    def _refresh_fired(self):
-        self.display.clear_plots()
-        self.plot_1d()
-
-
-    def plot_1d(self,kind='Spectrum',title=''):
-        #f, axs = plt.subplots(3, sharex=True)
-        axs = self.display.axs
         axs[0].set_title(self.exp1.crystal_name+' '+self.exp1.name)
         for meas in self.exp1.measurements:
             meas.plot_data(ax=axs[0],legend=False)
@@ -89,10 +51,9 @@ class ExperimentComparison(HasTraits):
         axs[2].set_title('Subtraction')
         for meas in self.subtraction.measurements:
             meas.plot_data(ax=axs[2],legend=False)
-
-        self.display.figure.suptitle(title, fontsize=16)
-
-        self.display.figure.show()
+        if fig is not None:
+            fig.suptitle(title, fontsize=16)
+            fig.show()
 
 
 

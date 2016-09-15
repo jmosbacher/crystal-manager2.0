@@ -28,8 +28,7 @@ from data_plot_viewers import DataPlotEditorBase
 from integration_results import IntegrationResult
 
 class IntegrationToolBase(HasTraits):
-    comparisons = List(ExperimentComparison)
-    
+    comparisons = List()
     int_results = List(IntegrationResult)
     has_selections = Property(Bool)
 
@@ -43,3 +42,41 @@ class IntegrationToolBase(HasTraits):
     integrate = Button('Integrate Selections')
     clear = Button('Clear Selections')
     refresh = Button('Refresh')
+
+    view = View(
+        HSplit(
+            VGroup(
+                HGroup(Item(name='integrate', show_label=False, enabled_when='has_selections'),
+                       Item(name='clear', show_label=False, enabled_when='has_selections'),
+                       Item(name='refresh', show_label=False),
+                       ),
+                Group(Item(name='display', show_label=False),
+                      show_border=True, label='Plots'),
+
+            ),
+
+            VGroup()
+
+        )
+
+    )
+
+    def _get_has_selections(self):
+        if self.display is None:
+            return False
+        if len(self.display.selections):
+            return True
+        else:
+            return False
+
+    def _display_default(self):
+        display = DataPlotEditorBase(nplots=3)
+        # display.add_subplots(3)
+        return display
+
+    def _refresh_fired(self):
+        self.display.clear_plots()
+        self.selected.plot_1d()
+
+class ComparisonIntegrationTool(IntegrationToolBase):
+    selected = Instance(ExperimentComparison)
