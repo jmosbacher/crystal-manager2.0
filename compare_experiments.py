@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.colors import colorConverter
-from matplotlib.widgets import  RectangleSelector
+
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -23,6 +23,8 @@ except:
     import pickle
 from experiment import SpectrumExperiment,BaseExperiment, ExperimentTableEditor
 from measurement import SpectrumMeasurement
+from data_plot_viewers import DataPlotEditorBase
+from integration_results import IntegrationResult
 
 
 class ExperimentComparison(HasTraits):
@@ -32,21 +34,50 @@ class ExperimentComparison(HasTraits):
     subtraction = Instance(BaseExperiment)
     has_sub = Property(Bool)
 
-    #####       Plots     #####
-    figure = Instance(Figure,())
-    exp1_ax = Instance(Axes)
-    exp2_ax = Instance(Axes)
-    subtraction_ax = Instance(Axes)
 
-    def mpl_setup(self):
-        def onselect(eclick, erelease):
-            print "eclick: {}, erelease: {}".format(eclick, erelease)
 
-        self.rs = RectangleSelector(self.axes, onselect,
-                                    drawtype='box', useblit=True)
+    view = View(
+                HSplit(
+                    VGroup(
+                        HGroup(Item(name='integrate',show_label=False, enabled_when='has_selections'),
+                               Item(name='clear', show_label=False, enabled_when='has_selections'),
+                               Item(name='refresh', show_label=False),
+                               ),
+                        Group(Item(name='display',show_label=False),
+                              show_border=True,label='Plots'),
 
-    def plot_1d(self,kind,title=''):
-        f, axs = plt.subplots(3, sharex=True)
+
+
+                ),
+
+                       VGroup()
+
+
+                )
+
+    )
+
+    def _get_has_selections(self):
+        if self.display is None:
+            return False
+        if len(self.display.selections):
+            return True
+        else:
+            return False
+
+    def _display_default(self):
+        display = DataPlotEditorBase(nplots=3)
+        #display.add_subplots(3)
+        return display
+
+    def _refresh_fired(self):
+        self.display.clear_plots()
+        self.plot_1d()
+
+
+    def plot_1d(self,kind='Spectrum',title=''):
+        #f, axs = plt.subplots(3, sharex=True)
+        axs = self.display.axs
         axs[0].set_title(self.exp1.crystal_name+' '+self.exp1.name)
         for meas in self.exp1.measurements:
             meas.plot_data(ax=axs[0],legend=False)
@@ -59,8 +90,11 @@ class ExperimentComparison(HasTraits):
         for meas in self.subtraction.measurements:
             meas.plot_data(ax=axs[2],legend=False)
 
-        plt.suptitle(title, fontsize=16)
-        plt.show()
+        self.display.figure.suptitle(title, fontsize=16)
+
+        self.display.figure.show()
+
+
 
     def plot_2d(self, kind, title=''):
         jet = plt.get_cmap('jet')

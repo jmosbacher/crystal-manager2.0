@@ -28,7 +28,7 @@ class ArrayViewer(HasTraits):
         Item('data',
               show_label = False,
               editor     = ArrayViewEditor(titles = [ 'Wavelength', 'Counts' ],
-                                           format = '%.4f',
+                                           format = '%.2f',
                                            show_index= False,
                                            # Font fails with wx in OSX;
                                            #   see traitsui issue #13:
@@ -246,9 +246,14 @@ class SpectrumMeasurement(BaseMeasurement):
         return binned
 
     def integrate_range(self,l,r):
+        '''
+
+        :param l: integration minimum (inclusive)
+        :param r: integration maximum (inclusive)
+        :return: background corrected integration result
+        '''
         signal = self.norm_signal()
         bgnd = self.norm_bg()
-
         sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
         bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
         return sig-bg
@@ -261,7 +266,7 @@ class SpectrumMeasurement(BaseMeasurement):
             if ax is not None:
                 ax.set_xlabel('Emission Wavelength')
                 ax.set_ylabel('Counts')
-                plt.show()
+                #plt.show()
             else:
                 plt.show()
 
