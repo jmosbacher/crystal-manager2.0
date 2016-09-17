@@ -143,9 +143,10 @@ def bin_data_array(data,nbins=200):
         out[idx,1] = np.sum(bin[:,1])
     return out
 
-def data_array_to_text_file(array,path,headers=None,fmt='plain'):
+def data_array_to_text_file(array,path,headers=None,table_fmt='plain',float_fmt='.2e'):
     with open(path,'w') as f:
-        print(tabulate(array,headers=headers,tablefmt=format),file=f)
+        #print(headers, table_fmt,float_fmt, file=f)
+        print(tabulate(array,headers=headers,tablefmt=table_fmt,floatfmt=float_fmt),file=f)
         return path
     return None
 

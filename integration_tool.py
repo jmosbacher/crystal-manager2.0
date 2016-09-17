@@ -51,6 +51,7 @@ class IntegrationToolBase(HasTraits):
                 HGroup(Item(name='select_range', show_label=False, ),
                        Item(name='integrate', show_label=False, ),
                        Item(name='clear', show_label=False, ),
+                       spring,
                        Item(name='refresh', show_label=False),
                        show_border=True, label='Control'),
                 Group(Item(name='display', style='custom',show_label=False),

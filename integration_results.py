@@ -20,7 +20,9 @@ class IntegrationResultBaseHandler(BaseSaveHandler):
         if fileDialog.path == '' or fileDialog.return_code == CANCEL:
             return False
         else:
-            data_array_to_text_file(path=fileDialog.path,array=info.object.results,headers=info.object.headers,fmt=info.object.save_fmt)
+            data_array_to_text_file(path=fileDialog.path,array=info.object.results,
+                                    headers=info.object.headers,table_fmt=info.object.table_fmt,
+                                    float_fmt=info.object.float_fmt)
 
 
 class IntegrationResultBase(HasTraits):
@@ -31,7 +33,11 @@ class IntegrationResultBase(HasTraits):
 class ComparisonIntegrationResult(IntegrationResultBase):
     headers = ['Excitation WL', 'Counts 1st', 'Counts 2nd', 'Counts Subtraction']
     save_data = Button('Export Data') #Action(name = 'Export', action = 'save_data')
-    save_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
+    table_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
+    fmt = Str('e')
+    ndec = Int(2)
+    float_fmt = Property(Str)
+
 
     view = View(
         VGroup(
@@ -39,12 +45,14 @@ class ComparisonIntegrationResult(IntegrationResultBase):
                    ),
             HGroup(
                 Item(name='save_data', editor=ButtonEditor(label='Export Data')),
-                Item(name='save_fmt', label='Format'),
+                Item(name='table_fmt', label='Table Format'),
+                Item(name='fmt',editor=EnumEditor(values={'f':'Regular', 'e':'Exponential'}), label='Number Format'),
+                Item(name='ndec', label='Decimals'),
             ),
             Group(Item('results',
                  show_label=False,
                  editor=ArrayViewEditor(titles=['Excitation WL', 'Counts 1st', 'Counts 2nd', 'Counts Subtraction'],
-                                        format='%g',
+                                        format='%.2e',
                                         show_index=False,
                                         # Font fails with wx in OSX;
                                         #   see traitsui issue #13:
@@ -60,13 +68,19 @@ class ComparisonIntegrationResult(IntegrationResultBase):
 
     )
 
+    def _get_float_fmt(self):
+        return '.{}{}'.format(self.ndec,self.fmt)
+
     def _results_default(self):
         return np.asarray([[0.0,0.0,0.0,0.0]]*4)
 
 class ExperimentIntegrationResult(IntegrationResultBase):
     headers = ['Excitation WL', 'Counts Signal', 'Counts BG', 'Counts REF']
     save_data = Button('Export Data') #Action(name = 'Export Data', action = 'save_data')
-    save_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
+    table_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
+    fmt = Str('e')
+    ndec = Int(2)
+    float_fmt = Property(Str)
 
     view = View(
         VGroup(
@@ -75,11 +89,15 @@ class ExperimentIntegrationResult(IntegrationResultBase):
                    ),
             HGroup(
                 Item(name='save_data', editor=ButtonEditor(label='Export Data')),
-                Item(name='save_fmt', label='Format'),
+                Item(name='table_fmt', label='Table Format'),
+                Item(name='fmt', editor=EnumEditor(values={'f':'Regular', 'e':'Exponential'}), label='Number Format'),
+                Item(name='ndec', label='Decimals'),
+
+
             ),
             Group(Item('results',
                  editor=ArrayViewEditor(titles=['Excitation WL', 'Counts Signal', 'Counts BG', 'Counts REF'],
-                                        format='%g',
+                                        format='%.2e',
                                         show_index=False,
                                         # Font fails with wx in OSX;
                                         #   see traitsui issue #13:
@@ -92,6 +110,9 @@ class ExperimentIntegrationResult(IntegrationResultBase):
                 ),
     handler = IntegrationResultBaseHandler(),
     )
+
+    def _get_float_fmt(self):
+        return '.{}{}'.format(self.ndec,self.fmt)
 
     def _results_default(self):
         return np.asarray([[0.0,0.0,0.0,0.0]]*4)
