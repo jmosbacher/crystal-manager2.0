@@ -287,21 +287,21 @@ class SpectrumExperiment(BaseExperiment):
         result = df.to_csv(path)
         return result
 
-    def plot_1d(self,kind,ax=None,title=''):
-        plt.figure()
-        for exp in self.measurements:
-            if exp.__kind__ == kind:
-                exp.plot_data(ax)
-        plt.title(title)
-        plt.show()
+    def plot_1d(self,kind='Spectrum',axs=[None]*3,title='',legend=True):
+        if None in axs:
+            plt.figure()
+        for meas in self.measurements:
+            if meas.__kind__ == kind:
+                meas.plot_data(axs[0],data='signal',legend=legend)
 
-        """
-        df = self.make_dataframe()
-        ax = df.plot()
-        ax.set_xlabel('Emission Wavelength')
-        ax.set_ylabel('Counts')
-        plt.show()
-        """
+                meas.plot_data(axs[1], data='bg',legend=legend)
+
+                meas.plot_data(axs[2], data='ref',legend=legend)
+        if None in axs:
+            plt.title(title)
+            plt.show()
+
+
 
 
     def plot_2d(self,kind,title=''):

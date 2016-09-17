@@ -1,7 +1,8 @@
+from __future__ import print_function
 import numpy as np
 import math
 import os
-
+from tabulate import tabulate
 
 
 def merge_data_arrays(array1,array2,res=0.065):
@@ -142,7 +143,11 @@ def bin_data_array(data,nbins=200):
         out[idx,1] = np.sum(bin[:,1])
     return out
 
-
+def data_array_to_text_file(array,path,headers=None,fmt='plain'):
+    with open(path,'w') as f:
+        print(tabulate(array,headers=headers,tablefmt=format),file=f)
+        return path
+    return None
 
 def wl_to_rgb(wl):
     select = np.select

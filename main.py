@@ -31,6 +31,9 @@ class MainApplication(CanSaveMixin):
     save_as_a = Action(name = 'Save As', action = 'saveAs')
     load_all = Action(name = 'Reload', action = 'Reload',enabled_when='filepath')
     load_from_a = Action(name = 'Load from File', action = 'loadProject')
+    comp_int_tool = Action(name='Comparison Integration Tool', action='comp_integration_tool')
+    exp_int_tool = Action(name='Experiment Integration Tool', action='exp_integration_tool')
+    comp_tool = Action(name='Comparison Tool', action='comp_tool')
 
     #####       Autosave Menu      #####
     cfg_autosave = Action(name = 'Configure Autosave', action = 'cfg_autosave')
@@ -82,6 +85,8 @@ class MainApplication(CanSaveMixin):
         menubar=MenuBar(
             Menu(save_a, save_as_a,cfg_autosave, load_all, load_from_a,
                  name='File'),
+            Menu(exp_int_tool,comp_tool,comp_int_tool,
+                name='Tools'),
 
                         ),
         toolbar = ToolBar(add_new, rem_selected,edit  ),

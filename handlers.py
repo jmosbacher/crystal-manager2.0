@@ -41,12 +41,20 @@ class MainSaveHandler(BaseSaveHandler):
         else:
             info.object.status = 'Autosave Disabled.'
 
+    def comp_integration_tool(self,info):
+        info.object.selected.comparison_integration_tool()
 
+    def exp_integration_tool(self,info):
+        info.object.selected.experiment_integration_tool()
+
+    def comp_tool(self,info):
+        info.object.selected.comparison_tool()
 
     def object_autosaveInterval_changed(self,info):
         self.autosaveInterval = info.object.autosaveInterval
         info.object.status = 'Autosave Enabled. Will save every %d seconds to: %s' \
                              % (info.object.autosaveInterval, info.object.filepath)
+
 
 class ProjectHandler(BaseSaveHandler):
     extension = Str('prj')

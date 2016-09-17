@@ -24,7 +24,7 @@ except:
 from experiment import SpectrumExperiment,BaseExperiment, ExperimentTableEditor
 from measurement import SpectrumMeasurement
 from data_plot_viewers import DataPlotEditorBase
-from integration_results import IntegrationResult
+from integration_results import IntegrationResultBase
 
 
 class ExperimentComparison(BaseExperiment):
@@ -248,6 +248,7 @@ class AllExperimentList(HasTraits):
             Item(name='comparisons', show_label=False,editor=ExperimentListTableEditor(selected='selected_comp')),
         ),
         ),
+        buttons=['OK'],
         title = 'Compare experiments',
         scrollable = True,
         resizable = True,

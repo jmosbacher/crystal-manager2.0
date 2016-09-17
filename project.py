@@ -25,6 +25,10 @@ from handlers import ProjectHandler
 from compare_experiments import AllExperimentList, ExperimentComparison
 from experiment import ExperimentTableEditor, SpectrumExperiment, BaseExperiment
 from data_importing import AutoExperimentImportTool, AutoSpectrumImportTool
+from integration_tool import ComparisonIntegrationTool, ExperimentIntegrationTool
+from integration_results import IntegrationResultBase
+
+
 class Project(CanSaveMixin):
     main = Any()
     name = Str('New Project')
@@ -34,7 +38,10 @@ class Project(CanSaveMixin):
     #####       Data     #####
     experiments = List(BaseExperiment)
     comparisons = List(ExperimentComparison)
-    crystal_cnt = Property()
+    comp_int_results = List(IntegrationResultBase)
+    exp_int_results = List(IntegrationResultBase)
+
+    experiment_cnt = Property()
     selected = Instance(BaseExperiment)
 
     #####       Flags      #####
@@ -48,7 +55,7 @@ class Project(CanSaveMixin):
     merge = Button('Merge')
     select_all = Button('Select All')
     unselect_all = Button('Un-select All')
-    compare = Button('Compare Tool')
+    #compare = Button('Compare Tool')
     import_folders = Button('Import Folders')
     import_files = Button('Import Files')
 
@@ -58,7 +65,7 @@ class Project(CanSaveMixin):
             HGroup(
                 Item(name='add_new', show_label=False),
                 Item(name='edit', show_label=False, enabled_when='selected'),
-                Item(name='compare', show_label=False),
+                #Item(name='compare', show_label=False),
                 Item(name='import_folders', show_label=False),
                 Item(name='import_files', show_label=False),
                 spring,
@@ -100,15 +107,12 @@ class Project(CanSaveMixin):
             return
         self.main.dirty = True
 
-    def _get_crystal_cnt(self):
-        return len(self.crystals)
+    def _get_experiment_cnt(self):
+        return len(self.experiments)
 
     def _edit_fired(self):
         self.selected.edit_traits()
 
-    def _compare_fired(self):
-        comp = AllExperimentList(self)
-        comp.edit_traits()
 
     def _select_all_fired(self):
         for exp in self.experiments:
@@ -151,6 +155,18 @@ class Project(CanSaveMixin):
     def _add_new_fired(self):
         self.add_new_experiment()
 
+    def comparison_integration_tool(self):
+        tool = ComparisonIntegrationTool(project=self)
+        tool.edit_traits()
+
+    def experiment_integration_tool(self):
+        tool = ExperimentIntegrationTool(project=self)
+        tool.edit_traits()
+
+    def comparison_tool(self):
+        comp = AllExperimentList(self)
+        comp.edit_traits()
+
     #def _import_data_fired(self):
         #self.selected.import_data()
 
@@ -162,7 +178,7 @@ class ProjectTableEditor(TableEditor):
     columns = [
                 CheckboxColumn(name='is_selected', label='', width=0.1, horizontal_alignment='center', ),
                 ObjectColumn(name = 'name',label = 'Name',width = 0.35,horizontal_alignment = 'left',editable=True),
-                ObjectColumn(name = 'crystal_cnt',label = 'Crystals',horizontal_alignment = 'center',
+                ObjectColumn(name = 'experiment_cnt',label = 'Experiments',horizontal_alignment = 'center',
                              width = 0.1,editable=False),
 
                 ObjectColumn(name = 'comments',label = 'Comments',width = 0.45,

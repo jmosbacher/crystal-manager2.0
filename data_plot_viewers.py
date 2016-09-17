@@ -8,7 +8,7 @@ from matplotlib.widgets import  RectangleSelector
 from matplotlib.widgets import SpanSelector
 from mpl_figure_editor import MPLFigureEditor, MPLInitHandler
 from matplotlib.figure import Figure
-
+import matplotlib.pyplot as plt
 
 class DataPlotEditorBase(HasTraits):
 
@@ -27,21 +27,30 @@ class DataPlotEditorBase(HasTraits):
         self.nplots = nplots
         super(DataPlotEditorBase, self).__init__()
 
+
+
     def add_subplots(self,num):
         for n in range(1,num+1):
-            self.axs.append(self.figure.add_subplot(num,n,1, axisbg='#FFFFCC'))
+            self.axs.append(self.figure.add_subplot(num,1,n, axisbg='#FFFFCC'))
+
+    def configure_selector(self):
         if len(self.axs):
             self.span = SpanSelector(self.axs[0], self.onselect, 'horizontal', useblit=True,
                              rectprops=dict(alpha=0.5, facecolor='red'))
+        self.figure.patch.set_facecolor('none')
         self.figure.canvas.draw()
 
     def plot_data(self,data,plot_num,title=' '):
         self.axs[plot_num].plot(data[:,0],data[:,1],)
+        plt.pause(1)
 
     def clear_selections(self):
         self.selections = []
         for span in self.axvspn:
-            span.remove()
+            try:
+                span.remove()
+            except:
+                pass
         self.axvspn = []
 
     def clear_plots(self):
@@ -58,7 +67,9 @@ class DataPlotEditorBase(HasTraits):
         self.figure.canvas.draw()
 
     def mpl_setup(self):
-        self.add_subplots(self.nplots)
+        if len(self.axs) != self.nplots:
+            self.add_subplots(self.nplots)
+        self.configure_selector()
 
 
 

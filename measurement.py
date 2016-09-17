@@ -192,12 +192,14 @@ class SpectrumMeasurement(BaseMeasurement):
         if self.has_ref:
             self.ref[:, 1] *= scale
 
-    def create_series(self):
+    def create_series(self,data='bg_corrected'):
         """
 
         :return:
         """
-        sig = self.bin_data()
+
+        sig = self.bin_data(data)
+
         return pd.Series(sig[:, 1], index=sig[:, 0], name=self.ex_wl)
 
     def normalize(self,data):
@@ -221,23 +223,41 @@ class SpectrumMeasurement(BaseMeasurement):
 
         return binned
 
+    def bin_ref(self):
+        """
+
+        :return:
+        """
+        binned = np.asarray([])
+        if self.has_ref:
+            normed = self.normalize(self.ref)
+            binned = bin_data_array(normed)
+
+        return binned
+
     def norm_signal(self):
         return self.normalize(self.signal)
 
     def norm_ref(self):
         return self.normalize(self.ref)
 
-    def bin_data(self,rem_bg=True):
+    def bin_data(self,data='bg_corrected'):
         """
         :return:
         """
+        normed = np.zeros((1, 2))
         if not self.has_sig:
-            return np.zeros((1,2))
+            return normed
 
-        normed = self.normalize(self.signal)
+        if data in ['bg_corrected', 'signal']:
+            normed = self.normalize(self.signal)
+        elif data=='bg':
+            normed = self.normalize(self.bg)
+        elif data=='ref':
+            normed = self.normalize(self.ref)
         binned = bin_data_array(normed)
 
-        if rem_bg:
+        if data=='bg_corrected':
             bg = self.bin_bg()
             binned[:,1] -=  bg[:,1]
 
@@ -245,25 +265,67 @@ class SpectrumMeasurement(BaseMeasurement):
 
         return binned
 
-    def integrate_range(self,l,r):
+    def integrate_bg_corrected(self,l,r):
         '''
 
         :param l: integration minimum (inclusive)
         :param r: integration maximum (inclusive)
         :return: background corrected integration result
         '''
+        if not self.has_sig:
+            return 0.0
         signal = self.norm_signal()
         bgnd = self.norm_bg()
         sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
         bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
         return sig-bg
 
+    def integrate_signal(self,l,r):
+        '''
 
-    def plot_data(self,ax=None,legend=True):
+        :param l: integration minimum (inclusive)
+        :param r: integration maximum (inclusive)
+        :return: background corrected integration result
+        '''
+        if not self.has_sig:
+            return 0.0
+        signal = self.norm_signal()
+        sig = np.sum(np.where(np.logical_and(signal[:, 0] <= r, signal[:, 0] >= l), signal[:, 1], 0.0))
+        return sig
+
+    def integrate_bg(self, l, r):
+        '''
+
+        :param l: integration minimum (inclusive)
+        :param r: integration maximum (inclusive)
+        :return: background corrected integration result
+        '''
+        if not self.has_bg:
+            return 0.0
+        bgnd = self.norm_bg()
+        bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
+        return bg
+
+    def integrate_ref(self, l, r):
+        '''
+
+        :param l: integration minimum (inclusive)
+        :param r: integration maximum (inclusive)
+        :return: background corrected integration result
+        '''
+        if not self.has_ref:
+            return 0.0
+        ref = self.norm_ref()
+        ref_i = np.sum(np.where(np.logical_and(ref[:, 0] <= r, ref[:, 0] >= l), ref[:, 1], 0.0))
+        return ref_i
+
+
+    def plot_data(self,ax=None,legend=True, data='bg_corrected'):
         if self.has_sig:
-            ser = self.create_series()
-            ax = ser.plot(color=self.color, label=str(self.ex_wl), legend=legend, ax=ax)
+            ser = self.create_series(data)
+            ax = ser.plot(color=self.color, legend=legend, ax=ax)
             if ax is not None:
+                ax.set_title(str(self.ex_wl),fontsize=12)
                 ax.set_xlabel('Emission Wavelength')
                 ax.set_ylabel('Counts')
                 #plt.show()
