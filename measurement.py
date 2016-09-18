@@ -9,7 +9,7 @@ from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-from auxilary_functions import wl_to_rgb, bin_data_array
+from auxilary_functions import wl_to_rgb, bin_data_array, integrate_gaussian
 from file_selector import string_list_editor
 import numpy as np
 import random
@@ -265,7 +265,12 @@ class SpectrumMeasurement(BaseMeasurement):
 
         return binned
 
-    def integrate_bg_corrected(self,l,r):
+    def integrate_with_fit(self,data,l,r):
+        x = np.trim_zeros(np.where(np.logical_and(data[:, 0] <= r, data[:, 0] >= l), data[:, 0], 0.0))
+        y = np.trim_zeros(np.where(np.logical_and(data[:, 0] <= r, data[:, 0] >= l), data[:, 1], 0.0))
+        return integrate_gaussian(x,y)
+
+    def integrate_bg_corrected(self,l,r,fit=False):
         '''
 
         :param l: integration minimum (inclusive)
@@ -274,13 +279,17 @@ class SpectrumMeasurement(BaseMeasurement):
         '''
         if not self.has_sig:
             return 0.0
+        sig = 0.0
         signal = self.norm_signal()
         bgnd = self.norm_bg()
-        sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
+        if fit:
+            sig = self.integrate_with_fit(signal,l,r)
+        if sig == 0.0:
+            sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
         bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
         return sig-bg
 
-    def integrate_signal(self,l,r):
+    def integrate_signal(self,l,r,fit=False):
         '''
 
         :param l: integration minimum (inclusive)
@@ -289,11 +298,15 @@ class SpectrumMeasurement(BaseMeasurement):
         '''
         if not self.has_sig:
             return 0.0
+        sig = 0.0
         signal = self.norm_signal()
-        sig = np.sum(np.where(np.logical_and(signal[:, 0] <= r, signal[:, 0] >= l), signal[:, 1], 0.0))
+        if fit:
+            sig = self.integrate_with_fit(signal,l,r)
+        if sig == 0.0:
+            sig = np.sum(np.where(np.logical_and(signal[:, 0] <= r, signal[:, 0] >= l), signal[:, 1], 0.0))
         return sig
 
-    def integrate_bg(self, l, r):
+    def integrate_bg(self, l, r,fit=False):
         '''
 
         :param l: integration minimum (inclusive)
@@ -306,7 +319,7 @@ class SpectrumMeasurement(BaseMeasurement):
         bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
         return bg
 
-    def integrate_ref(self, l, r):
+    def integrate_ref(self, l, r,fit=False):
         '''
 
         :param l: integration minimum (inclusive)

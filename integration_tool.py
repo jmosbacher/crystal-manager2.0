@@ -34,6 +34,7 @@ class IntegrationToolBase(HasTraits):
     selected = Instance(BaseExperiment)
     int_results = List(IntegrationResultBase)
     has_selections = Property(Bool)
+    use_fit = Bool(False)
 
     #####       Plots     #####
     display = Instance(DataPlotEditorBase)
@@ -50,6 +51,7 @@ class IntegrationToolBase(HasTraits):
             VGroup(
                 HGroup(Item(name='select_range', show_label=False, ),
                        Item(name='integrate', show_label=False, ),
+                       Item(name='use_fit', label='Fit Data', ),
                        Item(name='clear', show_label=False, ),
                        spring,
                        Item(name='refresh', show_label=False),
@@ -71,7 +73,7 @@ class IntegrationToolBase(HasTraits):
 
             ),
 
-        ),
+            ),
     buttons = ['OK'],
     title = 'Comparison Integration Tool',
     kind = 'nonmodal',
@@ -98,18 +100,22 @@ class IntegrationToolBase(HasTraits):
     def _refresh_fired(self):
         self.display.clear_plots()
         self.display.clear_selections()
-        self.selected.plot_1d(axs=self.display.axs,legend=False)
+        if len(self.display.axs):
+            self.selected.plot_1d(axs=self.display.axs,legend=False)
         self.set_titles()
         self.display.configure_selector()
+        plt.tight_layout()
 
     def _selected_changed(self):
         self.display.clear_plots()
         self.display.clear_selections()
-        self.selected.plot_1d(axs=self.display.axs,legend=False)
+        if len(self.display.axs):
+            self.selected.plot_1d(axs=self.display.axs,legend=False)
         self.set_titles()
         self.display.configure_selector()
+        plt.tight_layout()
 
-    def integrate_all(self):
+    def integrate_all(self, use_fit):
         raise NotImplementedError
 
     def store_results(self, results):
@@ -122,7 +128,7 @@ class IntegrationToolBase(HasTraits):
         raise NotImplementedError
 
     def _integrate_fired(self):
-        results = self.integrate_all()
+        results = self.integrate_all(self.use_fit)
         self.store_results(results)
 
     def _clear_fired(self):
@@ -147,13 +153,9 @@ class ComparisonIntegrationTool(IntegrationToolBase):
         display = DataPlotEditorBase(nplots=3)
         # display.add_subplots(3)
         return display
-    def set_titles(self):
-        pass
+
 
     def store_results(self,results):
-        if self.int_results[0].name=='empty':
-            self.int_results = []
-
         for result in results:
             res = ComparisonIntegrationResult()
             min = 0.0
@@ -165,7 +167,7 @@ class ComparisonIntegrationTool(IntegrationToolBase):
                     res.name = value
                 elif key=='min':
                     min = value
-                elif key==max:
+                elif key=='max':
                     max=value
                 else:
                     result_array.append([key, value.get('exp1',0.0),value.get('exp2',0.0),value.get('subtraction',0.0)])
@@ -173,26 +175,33 @@ class ComparisonIntegrationTool(IntegrationToolBase):
             res.results = np.asarray(sorted(result_array))
             self.int_results.append(res)
 
+    def set_titles(self):
+        self.display.set_title(self.selected.name)
+        if len(self.display.axs):
+            self.display.axs[0].set_title('Experiment 1',fontsize=12)
+            self.display.axs[1].set_title('Experiment 2',fontsize=12)
+            self.display.axs[2].set_title('Subtraction',fontsize=12)
 
-    def integrate_all(self):
+
+    def integrate_all(self, use_fit):
         results = []
         for n,(min, max) in enumerate(self.display.selections):
-            result = {'name': self.selected.name+str(n), 'min': min, 'max': max}
+            result = {'name': self.selected.name+'_'+str(n), 'min': min, 'max': max}
 
             for meas in self.selected.exp1.measurements:
                 if meas.ex_wl not in result.keys():
                     result[meas.ex_wl] = {}
-                result[meas.ex_wl]['exp1'] = meas.integrate_bg_corrected(min, max)
+                result[meas.ex_wl]['exp1'] = meas.integrate_bg_corrected(min, max,fit=use_fit)
 
             for meas in self.selected.exp2.measurements:
                 if meas.ex_wl not in result.keys():
                     result[meas.ex_wl] = {}
-                results[meas.ex_wl]['exp2'] = meas.integrate_bg_corrected(min, max)
+                result[meas.ex_wl]['exp2'] = meas.integrate_bg_corrected(min, max,fit=use_fit)
 
             for meas in self.selected.subtraction.measurements:
                 if meas.ex_wl not in result.keys():
-                    results[meas.ex_wl] = {}
-                result[meas.ex_wl]['subtraction'] = meas.integrate_bg_corrected(min, max)
+                    result[meas.ex_wl] = {}
+                result[meas.ex_wl]['subtraction'] = meas.integrate_bg_corrected(min, max,fit=use_fit)
 
             results.append(result)
         return results
@@ -220,6 +229,7 @@ class ExperimentIntegrationTool(IntegrationToolBase):
 
 
     def set_titles(self):
+        self.display.set_title(self.selected.name)
         if len(self.display.axs):
             self.display.axs[0].set_title('Signal',fontsize=12)
             self.display.axs[1].set_title('Background',fontsize=12)
@@ -242,22 +252,22 @@ class ExperimentIntegrationTool(IntegrationToolBase):
                     max = value
                 else:
                     result_array.append(
-                        [key, value.get('sig', 0.0), value.get('bg', 0.0), value.get('ref', 0.0)])
+                        [key, value.get('sig', 0.0), value.get('bg', 0.0),value.get('sig', 0.0)-value.get('bg', 0.0) , value.get('ref', 0.0)])
             res.int_range = (min, max)
             res.results = np.asarray(sorted(result_array))
             self.int_results.append(res)
 
-    def integrate_all(self):
+    def integrate_all(self,use_fit):
         results = []
-        for min, max in self.display.selections:
-            result = {'name': self.selected.name, 'min': min, 'max': max}
+        for n, (min, max) in enumerate(self.display.selections):
+            result = {'name': self.selected.name + '_' + str(n), 'min': min, 'max': max}
 
             for meas in self.selected.measurements:
                 if meas.ex_wl not in result.keys():
                     result[meas.ex_wl] = {}
-                result[meas.ex_wl]['sig'] = meas.integrate_signal(min, max)
-                result[meas.ex_wl]['bg'] = meas.integrate_bg(min, max)
-                result[meas.ex_wl]['ref'] = meas.integrate_ref(min, max)
+                result[meas.ex_wl]['sig'] = meas.integrate_signal(min, max,fit=use_fit)
+                result[meas.ex_wl]['bg'] = meas.integrate_bg(min, max,fit=use_fit)
+                result[meas.ex_wl]['ref'] = meas.integrate_ref(min, max,fit=use_fit)
             if len(result.items()):
                 results.append(result)
         return results

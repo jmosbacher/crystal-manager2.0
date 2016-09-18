@@ -9,12 +9,14 @@ from auxilary_functions import data_array_to_text_file
 
 
 class IntegrationResultBaseHandler(BaseSaveHandler):
-    extension = Str('int')
+    #extension = Str('int')
+    promptOnExit = False
 
     def object_save_data_changed(self, info):
         fileDialog = FileDialog(action='save as', title='Save As',
                                 wildcard=self.wildcard,
-                                parent=info.ui.control)
+                                parent=info.ui.control,
+                                default_filename=info.object.name+'_integration')
 
         fileDialog.open()
         if fileDialog.path == '' or fileDialog.return_code == CANCEL:
@@ -49,9 +51,10 @@ class ComparisonIntegrationResult(IntegrationResultBase):
                 Item(name='fmt',editor=EnumEditor(values={'f':'Regular', 'e':'Exponential'}), label='Number Format'),
                 Item(name='ndec', label='Decimals'),
             ),
+
             Group(Item('results',
                  show_label=False,
-                 editor=ArrayViewEditor(titles=['Excitation WL', 'Counts 1st', 'Counts 2nd', 'Counts Subtraction'],
+                 editor=ArrayViewEditor(titles=['Excitation WL', '1st Exp. (BG corrected)', '2nd Exp. (BG corrected)', 'Subtraction (BG corrected)'],
                                         format='%.2e',
                                         show_index=False,
                                         # Font fails with wx in OSX;
@@ -65,7 +68,8 @@ class ComparisonIntegrationResult(IntegrationResultBase):
 
 
     handler=IntegrationResultBaseHandler(),
-
+    resizable=True,
+    scrollable=True,
     )
 
     def _get_float_fmt(self):
@@ -75,7 +79,7 @@ class ComparisonIntegrationResult(IntegrationResultBase):
         return np.asarray([[0.0,0.0,0.0,0.0]]*4)
 
 class ExperimentIntegrationResult(IntegrationResultBase):
-    headers = ['Excitation WL', 'Counts Signal', 'Counts BG', 'Counts REF']
+    headers = ['Excitation WL', 'Signal (Counts)', 'BG (Counts)','Signal-BG', 'REF (Counts)']
     save_data = Button('Export Data') #Action(name = 'Export Data', action = 'save_data')
     table_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
     fmt = Str('e')
@@ -96,7 +100,7 @@ class ExperimentIntegrationResult(IntegrationResultBase):
 
             ),
             Group(Item('results',
-                 editor=ArrayViewEditor(titles=['Excitation WL', 'Counts Signal', 'Counts BG', 'Counts REF'],
+                 editor=ArrayViewEditor(titles=['Excitation WL', 'Signal (Counts)', 'BG (Counts)','Signal-BG', 'REF (Counts)'],
                                         format='%.2e',
                                         show_index=False,
                                         # Font fails with wx in OSX;

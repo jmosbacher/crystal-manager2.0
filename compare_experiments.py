@@ -35,8 +35,7 @@ class ExperimentComparison(BaseExperiment):
     has_sub = Property(Bool)
 
 
-
-    def plot_1d(self,kind='Spectrum',title='',axs=None,fig=None):
+    def plot_1d(self,kind='Spectrum',title='',axs=None,fig=None,legend=True):
         if axs is None:
             f, axs = plt.subplots(3, sharex=True)
 

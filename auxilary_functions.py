@@ -3,7 +3,7 @@ import numpy as np
 import math
 import os
 from tabulate import tabulate
-
+from scipy.optimize import curve_fit
 
 def merge_data_arrays(array1,array2,res=0.065):
     '''
@@ -149,6 +149,21 @@ def data_array_to_text_file(array,path,headers=None,table_fmt='plain',float_fmt=
         print(tabulate(array,headers=headers,tablefmt=table_fmt,floatfmt=float_fmt),file=f)
         return path
     return None
+
+def integrate_gaussian(x,f):
+    def gauss(x,a,mean,sigma_sqr):
+        return a*np.exp(-(x-mean)**2/(2*sigma_sqr))
+
+    res = np.mean(np.diff(x))
+    y = f/res
+    a0 = y.max()
+    mean0 = np.sum(x * y) / np.sum(y)
+    sigma_sqr0 = np.sqrt(np.sum(y * (x - mean0)**2) / np.sum(y))
+    try:
+        p, pcov = curve_fit(gauss, x, y, p0=[a0, mean0, sigma_sqr0])
+    except:
+        p = [0.0,0.0,0.0]
+    return np.sqrt(2*np.pi*p[2])*p[0]
 
 def wl_to_rgb(wl):
     select = np.select

@@ -57,6 +57,8 @@ class DataPlotEditorBase(HasTraits):
         for ax in self.axs:
             ax.cla()
 
+    def set_title(self,title=' '):
+        self.figure.suptitle(title)
 
     def onselect(self,xmin, xmax):
         if xmax-xmin == 0:
@@ -70,6 +72,7 @@ class DataPlotEditorBase(HasTraits):
         if len(self.axs) != self.nplots:
             self.add_subplots(self.nplots)
         self.configure_selector()
+
 
 
 
