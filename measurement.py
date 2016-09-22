@@ -219,7 +219,8 @@ class SpectrumMeasurement(BaseMeasurement):
         binned = np.asarray([])
         if self.has_bg:
             normed = self.normalize(self.bg)
-            binned = bin_data_array(normed)
+            bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
+            binned = bin_data_array(normed,nbins=bins)
 
         return binned
 
@@ -231,7 +232,8 @@ class SpectrumMeasurement(BaseMeasurement):
         binned = np.asarray([])
         if self.has_ref:
             normed = self.normalize(self.ref)
-            binned = bin_data_array(normed)
+            bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
+            binned = bin_data_array(normed,nbins=bins)
 
         return binned
 
@@ -255,7 +257,8 @@ class SpectrumMeasurement(BaseMeasurement):
             normed = self.normalize(self.bg)
         elif data=='ref':
             normed = self.normalize(self.ref)
-        binned = bin_data_array(normed)
+        bins=round(normed[:,0].max())-round(normed[:,0].min())
+        binned = bin_data_array(normed,nbins=bins)
 
         if data=='bg_corrected':
             bg = self.bin_bg()
@@ -284,7 +287,7 @@ class SpectrumMeasurement(BaseMeasurement):
         bgnd = self.norm_bg()
         if fit:
             sig = self.integrate_with_fit(signal,l,r)
-        if sig == 0.0:
+        else:
             sig = np.sum(np.where(np.logical_and(signal[:,0]<=r,signal[:,0]>=l),signal[:,1],0.0))
         bg = np.sum(np.where(np.logical_and(bgnd[:, 0] <= r, bgnd[:, 0] >= l), bgnd[:, 1], 0.0))
         return sig-bg
@@ -302,7 +305,7 @@ class SpectrumMeasurement(BaseMeasurement):
         signal = self.norm_signal()
         if fit:
             sig = self.integrate_with_fit(signal,l,r)
-        if sig == 0.0:
+        else:
             sig = np.sum(np.where(np.logical_and(signal[:, 0] <= r, signal[:, 0] >= l), signal[:, 1], 0.0))
         return sig
 

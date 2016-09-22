@@ -143,12 +143,40 @@ def bin_data_array(data,nbins=200):
         out[idx,1] = np.sum(bin[:,1])
     return out
 
-def data_array_to_text_file(array,path,headers=None,table_fmt='plain',float_fmt='.2e'):
+def data_array_to_text_file(array,path,headers=None,table_fmt='plain',float_fmt='.2e',first_line=None):
     with open(path,'w') as f:
-        #print(headers, table_fmt,float_fmt, file=f)
+        if first_line is not None:
+            print(first_line, file=f)
         print(tabulate(array,headers=headers,tablefmt=table_fmt,floatfmt=float_fmt),file=f)
         return path
     return None
+
+def sum_of_gaussians(N):
+    def gaussians(x,p):
+        return np.sum([p['a'][i]*np.exp(-(x-p['mean'][i])**2/(2*p['sigma_sqr'][i])) for i in range(N)])
+
+    return gaussians
+
+def fit_sum_of_gaussians(x,f, ranges):
+    res = np.mean(np.diff(x))
+    y = f / res
+
+    p0 = {'a':[], 'mean':[],'sigma_sqr':[]}
+
+    gaussians = sum_of_gaussians(len(ranges))
+    for mn,mx in ranges:
+        p0['a'].append(np.where(np.logical_and(y<=mx,y>=mn),y,0.0).max() )
+        p0['mean'].append( (mx+mn)/2.0 )
+        p0['sigma_sqr'].append( mx-mn )
+    try:
+        p, pcov = curve_fit(gaussians, x, y, p0=p0)
+    except:
+        p = p0
+
+        for key in p.keys():
+            p[key] = [0.0]*len(ranges)
+        pcov = 0.0
+    return p, pcov
 
 def integrate_gaussian(x,f):
     def gauss(x,a,mean,sigma_sqr):
@@ -164,6 +192,21 @@ def integrate_gaussian(x,f):
     except:
         p = [0.0,0.0,0.0]
     return np.sqrt(2*np.pi*p[2])*p[0]
+
+def pad_with_zeros(data, l,r):
+    res = np.mean(np.diff(data[:,0]))
+    min_wl = data[:,0].min()
+    max_wl = data[:,0].max()
+    add_l_wls = np.arange(l,min_wl,res)
+    add_l = np.zeros((len(add_l_wls),2))
+    add_l[:,0] = add_l_wls
+    add_r_wls = np.arange(max_wl+res,r+res, res)
+    add_r = np.zeros((len(add_r_wls),2))
+    add_r[:, 0] = add_r_wls
+    final = np.concatenate((add_l,data,add_r),axis=0)
+    return final
+
+
 
 def wl_to_rgb(wl):
     select = np.select

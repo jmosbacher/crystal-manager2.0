@@ -68,6 +68,14 @@ class DataPlotEditorBase(HasTraits):
             self.axvspn.append(ax.axvspan(xmin, xmax, color='red', alpha=0.4))
         self.figure.canvas.draw()
 
+    def redraw_selections(self):
+        self.axvspn=[]
+        for xmin,xmax in self.selections:
+            for ax in self.axs:
+                self.axvspn.append(ax.axvspan(xmin, xmax, color='red', alpha=0.4))
+
+        self.figure.canvas.draw()
+
     def mpl_setup(self):
         if len(self.axs) != self.nplots:
             self.add_subplots(self.nplots)

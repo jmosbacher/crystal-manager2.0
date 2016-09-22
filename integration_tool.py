@@ -64,7 +64,8 @@ class IntegrationToolBase(HasTraits):
             VGroup(
                 Group(Item(name='experiments', show_label=False,editor=ExperimentTableEditor(selected='selected')),
                       show_border=True, label='Data'),
-                Group(Item(name='int_results', show_label=False,style='custom',
+                VGroup(Item(name='save', show_label=False, ),
+                    Item(name='int_results', show_label=False,style='custom',
                            editor=ListEditor(use_notebook=True,deletable=True,page_name='.name'),),
                       show_border=True, label='Integration Results'),
 
@@ -99,21 +100,23 @@ class IntegrationToolBase(HasTraits):
 
     def _refresh_fired(self):
         self.display.clear_plots()
-        self.display.clear_selections()
+        #self.display.clear_selections()
         if len(self.display.axs):
             self.selected.plot_1d(axs=self.display.axs,legend=False)
         self.set_titles()
+        self.display.redraw_selections()
         self.display.configure_selector()
-        plt.tight_layout()
+        #plt.tight_layout()
 
     def _selected_changed(self):
         self.display.clear_plots()
-        self.display.clear_selections()
+        #self.display.clear_selections()
         if len(self.display.axs):
             self.selected.plot_1d(axs=self.display.axs,legend=False)
         self.set_titles()
+        self.display.redraw_selections()
         self.display.configure_selector()
-        plt.tight_layout()
+        #plt.tight_layout()
 
     def integrate_all(self, use_fit):
         raise NotImplementedError

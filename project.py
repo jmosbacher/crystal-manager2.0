@@ -27,7 +27,7 @@ from experiment import ExperimentTableEditor, SpectrumExperiment, BaseExperiment
 from data_importing import AutoExperimentImportTool, AutoSpectrumImportTool
 from integration_tool import ComparisonIntegrationTool, ExperimentIntegrationTool
 from integration_results import IntegrationResultBase
-
+from plotting_tool import PlottingTool3D
 
 class Project(CanSaveMixin):
     main = Any()
@@ -166,6 +166,10 @@ class Project(CanSaveMixin):
     def comparison_tool(self):
         comp = AllExperimentList(self)
         comp.edit_traits()
+
+    def plotting_tool(self):
+        tool = PlottingTool3D(project=self)
+        tool.edit_traits()
 
     #def _import_data_fired(self):
         #self.selected.import_data()

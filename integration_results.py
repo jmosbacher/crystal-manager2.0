@@ -22,9 +22,10 @@ class IntegrationResultBaseHandler(BaseSaveHandler):
         if fileDialog.path == '' or fileDialog.return_code == CANCEL:
             return False
         else:
+            range_data='Integration Range: %d to %d nm' %(info.object.int_range[0],info.object.int_range[1])
             data_array_to_text_file(path=fileDialog.path,array=info.object.results,
                                     headers=info.object.headers,table_fmt=info.object.table_fmt,
-                                    float_fmt=info.object.float_fmt)
+                                    float_fmt=info.object.float_fmt,first_line=range_data)
 
 
 class IntegrationResultBase(HasTraits):
@@ -85,6 +86,7 @@ class ExperimentIntegrationResult(IntegrationResultBase):
     fmt = Str('e')
     ndec = Int(2)
     float_fmt = Property(Str)
+
 
     view = View(
         VGroup(

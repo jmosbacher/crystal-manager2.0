@@ -8,13 +8,16 @@ from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from auxilary_functions import wl_to_rgb
 import numpy as np
 import random
 import pandas as pd
 from measurement import BaseMeasurement, SpectrumMeasurement, MeasurementTableEditor, ArrayViewer
 from data_importing import AutoSpectrumImportTool
-from auxilary_functions import merge_spectrums
+from auxilary_functions import merge_spectrums, pad_with_zeros
+from scipy.interpolate import griddata
 try:
     import cPickle as pickle
 except:
@@ -63,7 +66,8 @@ class SpectrumExperiment(BaseExperiment):
     show_signal = Button('View Signal')
     show_bg = Button('View BG')
     show_binned = Button('View Binned')
-
+    plot_3d_select = Enum('Mixed',['Mixed','Surface','Wires','Image'])
+    plot_3d = Button('Plot 3D')
     #####       Flags      #####
     is_selected = Bool(False)
     has_measurements = Property()
@@ -91,8 +95,8 @@ class SpectrumExperiment(BaseExperiment):
                     Item(name='rescale', show_label=False),
                   ),
             HGroup(
-
-                Item(name='plot_selected', show_label=False, enabled_when='selected'),
+                Item(name='plot_3d_select', label='3D Plot Type' ),
+                Item(name='plot_3d', show_label=False, ),
                 Item(name='show_binned', show_label=False, enabled_when='selected'),
                 Item(name='show_signal', show_label=False, enabled_when='selected'),
                 Item(name='show_bg', show_label=False, enabled_when='selected'),
@@ -124,6 +128,9 @@ class SpectrumExperiment(BaseExperiment):
         HasTraits.__init__(self)
         self.main = kargs.get('main', None)
 
+    def _selected_default(self):
+        return SpectrumMeasurement(main=self.main)
+    #####       Private Methods      #####
     def _anytrait_changed(self):
         if self.main is None:
             return
@@ -195,8 +202,11 @@ class SpectrumExperiment(BaseExperiment):
         tool = AutoSpectrumImportTool(self)
         tool.edit_traits()
 
-    def _selected_default(self):
-        return SpectrumMeasurement(main=self.main)
+    def _plot_3d_fired(self):
+        {'Mixed':self.plot_3d_mixed,'Surface':self.plot_3d_surf,
+        'Wires':self.plot_3d_wires,'Image':self.plot_3d_image}[self.plot_3d_select]()
+        return
+
 
     def _show_binned_fired(self):
         data = self.selected.bin_data()
@@ -212,7 +222,7 @@ class SpectrumExperiment(BaseExperiment):
         view.edit_traits()
 
 
-    #####       Private Methods      #####
+
     def _edit_fired(self):
         self.selected.edit_traits()
 
@@ -323,13 +333,19 @@ class SpectrumExperiment(BaseExperiment):
         ax.set_ylabel('Excitation Wavelength')
         plt.show()
 
-    def plot_3d(self,alpha,kind,title=''):
+    def plot_3d_polygons(self,alpha=0.5,kind='Spectrum',title=' ',figure=None,axs = None):
         """
 
         :return:
         """
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = axs
 
         def cc(arg):
             return colorConverter.to_rgba(arg, alpha=0.6)
@@ -366,7 +382,166 @@ class SpectrumExperiment(BaseExperiment):
         plt.title(title)
         plt.show()
 
+    def collect_3d_coordinates(self):
+        exem, zs = [], []
+        for meas in self.measurements:
+            ex_wl=meas.ex_wl
+            em_spectrum=meas.bin_data()
 
+            wls = np.empty(em_spectrum.shape)
+            wls[:,0] = np.full(len(em_spectrum), ex_wl)
+            wls[:,1] = em_spectrum[:,0]
+            zs.append(em_spectrum[:,1])
+            exem.append(wls)
+        cnts = np.concatenate(zs,axis=0)
+        exem = np.concatenate(exem, axis=0)
+        return exem,cnts
+
+    def make_meshgrid(self,step=1):
+        exem, cnts = self.collect_3d_coordinates()
+        ex_min, ex_max = exem[:,0].min(), exem[:,0].max()
+        em_min, em_max = exem[:,1].min(), exem[:,1].max()
+
+        grid_x, grid_y = np.mgrid[ex_min:ex_max:step, em_min:em_max:step]
+
+        grid_z = griddata(exem, cnts/step, (grid_x, grid_y), method='cubic',fill_value=0.0)
+        return grid_x, grid_y, grid_z
+
+
+    def plot_3d_wires(self, alpha=0.5, kind='Spectrum', title=' ', figure=None, axs=None, rstride=5, cstride=5):
+        """
+
+        :return:
+        """
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = axs
+
+        X,Y,Z = self.make_meshgrid()
+
+        ax.plot_wireframe(X,Y,Z, rstride=rstride, cstride=cstride)
+        ax.yaxis._axinfo['label']['space_factor'] = 2.8
+        ax.set_xlabel('Excitation Wavelength')
+        ax.set_xlim(X.min() - 30, X.max() + 30)
+        ax.set_ylabel('Emission Wavelength')
+        ax.set_ylim(Y.min() - 30, Y.max() + 30)
+        ax.set_zlabel('Counts')
+        ax.set_zlim(Z.min(), Z.max() + 100)
+        fig.suptitle(title)
+        if figure is None:
+            plt.show()
+
+        else:
+            fig.canvas.draw()
+
+    def plot_3d_surf(self, alpha=0.5, kind='Spectrum', title=' ', figure=None, axs=None, rstride=2, cstride=2):
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = axs
+        X, Y, Z = self.make_meshgrid()
+        surf = ax.plot_surface(X, Y, Z, rstride=rstride, cstride=cstride, cmap=cm.coolwarm,
+                               linewidth=0, antialiased=False)
+
+        span = Z.max()-Z.min()
+        ax.set_zlim(Z.min(), Z.max()+span/10)
+        ax.yaxis._axinfo['label']['space_factor'] = 2.8
+        ax.zaxis.set_major_locator(LinearLocator(10))
+        ax.zaxis.set_major_formatter(FormatStrFormatter('%d'))
+        ax.set_xlabel('Excitation Wavelength')
+        ax.set_xlim(X.min()-30, X.max()+30)
+        ax.set_ylabel('Emission Wavelength')
+        ax.set_ylim(Y.min()-30, Y.max()+30)
+        ax.set_zlabel('Counts')
+        fig.suptitle(title)
+        #fig.colorbar(surf, shrink=0.5, aspect=5)
+
+        if figure is None:
+            plt.show()
+
+        else:
+            fig.canvas.draw()
+
+    def plot_3d_mixed(self, alpha=0.5, kind='Spectrum', title=' ', figure=None, axs=None, rstride=5, cstride=5):
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = axs
+
+        X, Y, Z = self.make_meshgrid()
+        ax.plot_surface(X, Y, Z, rstride=rstride, cstride=cstride, alpha=alpha)
+        cset = ax.contourf(X, Y, Z, zdir='z', offset=Z.min()-Z.max()/2, cmap=cmx.coolwarm)
+        cset = ax.contourf(X, Y, Z, zdir='x', offset=X.min()-30, cmap=cmx.coolwarm)
+        cset = ax.contourf(X, Y, Z, zdir='y', offset=Y.max()+30, cmap=cmx.coolwarm)
+        ax.yaxis._axinfo['label']['space_factor'] = 2.8
+        ax.set_xlabel('Excitation Wavelength')
+        ax.set_xlim(X.min()-30, X.max()+30)
+        ax.set_ylabel('Emission Wavelength')
+        ax.set_ylim(Y.min()-30, Y.max()+30)
+        ax.set_zlabel('Counts')
+        fig.suptitle(title)
+        ax.set_zlim(Z.min()-Z.max()/2, Z.max()+1000)
+
+        if figure is None:
+            plt.show()
+        else:
+            fig.canvas.draw()
+
+    def plot_3d_image(self, figure=None, axs=None,title=' '):
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111)
+        else:
+            ax = axs
+        X, Y, Z = self.make_meshgrid()
+        im = ax.imshow(Z.T, extent=(X.min(), X.max(), Y.min(), Y.max()), origin='lower', cmap=cm.jet)
+        fig.suptitle(title)
+        #plt.imshow(Z, extent=(X.min(), X.max(), Y.min(), Y.max()), origin='lower')
+        if figure is None:
+            plt.show()
+        else:
+            fig.canvas.draw()
+
+    def plot_3d_contour(self, figure=None, axs=None,nlevel=10, title=' '):
+        if figure is None:
+            fig = plt.figure()
+        else:
+            fig = figure
+        if axs is None:
+            ax = fig.add_subplot(111)
+        else:
+            ax = axs
+        X, Y, Z = self.make_meshgrid()
+        levels = np.linspace(Z.min(),Z.max(),nlevel)
+        contf = ax.contourf(X, Y, Z, cmap=cm.jet, levels=levels,)
+        cont = ax.contour(X, Y, Z,  levels=levels, colors='k', )
+        ax.set_xlabel('Excitation Wavelength')
+        ax.set_xlim(X.min(), X.max())
+        ax.set_ylabel('Emission Wavelength')
+        ax.set_ylim(Y.min(), Y.max())
+        fig.suptitle(title)
+        fig.colorbar(contf, ax=ax, format="%d")
+        # plt.imshow(Z, extent=(X.min(), X.max(), Y.min(), Y.max()), origin='lower')
+        if figure is None:
+            plt.show()
+        else:
+            fig.canvas.draw()
 
 class ExperimentTableEditor(TableEditor):
 
