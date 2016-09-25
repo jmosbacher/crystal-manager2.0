@@ -53,6 +53,10 @@ class MainSaveHandler(BaseSaveHandler):
     def plot_tool(self, info):
         info.object.selected.plotting_tool()
 
+    def fit_tool(self, info):
+        info.object.selected.fitting_tool()
+
+
     def object_autosaveInterval_changed(self,info):
         self.autosaveInterval = info.object.autosaveInterval
         info.object.status = 'Autosave Enabled. Will save every %d seconds to: %s' \

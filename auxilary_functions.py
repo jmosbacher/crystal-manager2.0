@@ -42,9 +42,11 @@ def subtract_data_arrays(array1,array2):
     overlap1 = array1[np.where(np.logical_and((array1[:,0] >= l),(array1[:,0] <= r)))]
     overlap2 = array2[np.where(np.logical_and((array2[:,0] >= l), (array2[:,0] <= r)))]
     result = np.empty_like(overlap1)
-    overlap2 = np.resize(overlap2, overlap1.shape)
-    result[:, 0] = (overlap1[:, 0] + overlap2[:, 0])/2.0
-    result[:, 1] = overlap1[:, 1] - overlap2[:, 1]
+
+    result[:,0] = np.resize(overlap2[:,0], overlap1[:,0].shape)
+    result[:, 1] = np.resize(overlap2[:, 1], overlap1[:, 1].shape)
+    result[:, 0] = (overlap1[:, 0] + result[:, 0])/2.0
+    result[:, 1] = overlap1[:, 1] - result[:, 1]
     return result
 
 
@@ -171,16 +173,15 @@ def fit_sum_of_gaussians(x,f, ranges):
     try:
         p, pcov = curve_fit(gaussians, x, y, p0=p0)
     except:
-        p = p0
+        p = None
+        pcov = None
+    return gaussians,p, pcov
 
-        for key in p.keys():
-            p[key] = [0.0]*len(ranges)
-        pcov = 0.0
-    return p, pcov
+
+def gauss(x, a, mean, sigma):
+    return a * np.exp(-(x - mean) ** 2 / (2 * sigma**2))
 
 def integrate_gaussian(x,f):
-    def gauss(x,a,mean,sigma_sqr):
-        return a*np.exp(-(x-mean)**2/(2*sigma_sqr))
 
     res = np.mean(np.diff(x))
     y = f/res

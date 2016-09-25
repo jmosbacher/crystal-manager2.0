@@ -35,6 +35,8 @@ class MainApplication(CanSaveMixin):
     exp_int_tool = Action(name='Experiment Integration Tool', action='exp_integration_tool')
     comp_tool = Action(name='Comparison Tool', action='comp_tool')
     plot_tool = Action(name='Plotting Tool', action='plot_tool')
+    fit_tool = Action(name='Fitting Tool', action='fit_tool')
+
 
     #####       Autosave Menu      #####
     cfg_autosave = Action(name = 'Configure Autosave', action = 'cfg_autosave')
@@ -86,7 +88,7 @@ class MainApplication(CanSaveMixin):
         menubar=MenuBar(
             Menu(save_a, save_as_a,cfg_autosave, load_all, load_from_a,
                  name='File'),
-            Menu(exp_int_tool, comp_tool, comp_int_tool, plot_tool,
+            Menu(exp_int_tool, comp_tool, comp_int_tool, plot_tool, fit_tool,
                 name='Tools'),
 
                         ),
@@ -129,6 +131,8 @@ class MainApplication(CanSaveMixin):
         #path = os.path.join(localdir,'saved.spctrm')
         with open(self.filepath, 'rb') as f:
             self.projects = pickle.load(f)
+        if len(self.projects):
+            self.selected = self.projects[0]
 
     def _anytrait_changed(self):
         self.dirty = True

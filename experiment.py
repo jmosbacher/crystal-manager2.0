@@ -44,6 +44,9 @@ class SpectrumExperiment(BaseExperiment):
     em_wl_range = Property(Tuple)
     measurement_cnt = Property(Int)
 
+    fits_list = Property(Array)
+
+
     #####       UI      #####
     add_type = Enum(['Spectrum', 'Raman', 'Anealing'])
     add_meas = Button('Add Measurements')
@@ -146,10 +149,10 @@ class SpectrumExperiment(BaseExperiment):
 
     def _get_em_wl_range(self):
         wls = [10000, 0]
-        for exp in self.measurements:
-            if exp.__kind__ == 'Spectrum':
-                wls[0] = round(min(exp.em_wl[0], wls[0]))
-                wls[1] = round(max(exp.em_wl[1], wls[1]))
+        for meas in self.measurements:
+            if meas.__kind__ == 'Spectrum':
+                wls[0] = round(min(meas.em_wl[0], wls[0]))
+                wls[1] = round(max(meas.em_wl[1], wls[1]))
         return tuple(wls)
 
     def _get_measurement_cnt(self):
@@ -162,6 +165,13 @@ class SpectrumExperiment(BaseExperiment):
             return True
         else:
             return False
+
+    def _get_fits_list(self):
+        fits = []
+        for meas in self.measurements:
+            if len(meas.fits):
+                fits.extend([[meas.ex_wl,a,m,s] for a,m,s in meas.fits])
+        return np.asarray(fits)
 
     def _sort_by_wl_fired(self):
         def wl(spectrum):

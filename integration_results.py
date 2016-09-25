@@ -6,6 +6,7 @@ from pyface.api import FileDialog, confirm, error, YES, CANCEL
 import numpy as np
 from saving import BaseSaveHandler
 from auxilary_functions import data_array_to_text_file
+import pandas as pd
 
 
 class IntegrationResultBaseHandler(BaseSaveHandler):
@@ -21,22 +22,46 @@ class IntegrationResultBaseHandler(BaseSaveHandler):
         fileDialog.open()
         if fileDialog.path == '' or fileDialog.return_code == CANCEL:
             return False
-        else:
+        elif info.object.save_type=='Text':
             range_data='Integration Range: %d to %d nm' %(info.object.int_range[0],info.object.int_range[1])
             data_array_to_text_file(path=fileDialog.path,array=info.object.results,
                                     headers=info.object.headers,table_fmt=info.object.table_fmt,
                                     float_fmt=info.object.float_fmt,first_line=range_data)
 
+        elif info.object.save_type=='Excel':
+            df = info.object.create_dataframe()
+            df.to_excel(fileDialog.path+'.xlsx',
+                #float_format=info.object.float_fmt,
+                sheet_name='%dto%dnm' %info.object.int_range,
+                index_label='Excitation WL',
+            )
+
+        elif info.object.save_type == 'CSV':
+            df = info.object.create_dataframe()
+            df.to_csv(fileDialog.path,
+                    #float_format=info.object.float_fmt,
+                    index_label='Excitation WL',
+                    )
 
 class IntegrationResultBase(HasTraits):
+    headers = ['Excitation WL', '1st', '2nd', '3rd']
+    save_type = Enum(['Text','Excel','CSV'])
     name = Str('Results')
     int_range = Tuple((0.0,0.0),labels=['Min','Max'],cols=2)
     results = Array()
+    def create_dataframe(self):
+        df = pd.DataFrame(
+            data=self.results[:,1:],
+            index=self.results[:,0],
+            columns=self.headers[1:],
+        )
+        return df
 
 class ComparisonIntegrationResult(IntegrationResultBase):
     headers = ['Excitation WL', 'Counts 1st', 'Counts 2nd', 'Counts Subtraction']
     save_data = Button('Export Data') #Action(name = 'Export', action = 'save_data')
-    table_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs'])
+
+    table_fmt = Enum(['plain', 'simple', 'grid', 'fancy_grid', 'pipe','orgtbl','rst','mediawiki','html', 'latex', 'latex_booktabs',])
     fmt = Str('e')
     ndec = Int(2)
     float_fmt = Property(Str)
@@ -47,8 +72,9 @@ class ComparisonIntegrationResult(IntegrationResultBase):
             HGroup(Item(name='int_range', label='Integration Range', style='readonly'),
                    ),
             HGroup(
+                Item(name='save_type', show_label=False),
                 Item(name='save_data', editor=ButtonEditor(label='Export Data')),
-                Item(name='table_fmt', label='Table Format'),
+                Item(name='table_fmt', label='Table Format',enabled_when='save_type=="Text"'),
                 Item(name='fmt',editor=EnumEditor(values={'f':'Regular', 'e':'Exponential'}), label='Number Format'),
                 Item(name='ndec', label='Decimals'),
             ),
@@ -94,8 +120,9 @@ class ExperimentIntegrationResult(IntegrationResultBase):
 
                    ),
             HGroup(
+                Item(name='save_type', show_label=False),
                 Item(name='save_data', editor=ButtonEditor(label='Export Data')),
-                Item(name='table_fmt', label='Table Format'),
+                Item(name='table_fmt', label='Table Format',enabled_when='save_type=="Text"'),
                 Item(name='fmt', editor=EnumEditor(values={'f':'Regular', 'e':'Exponential'}), label='Number Format'),
                 Item(name='ndec', label='Decimals'),
 

@@ -73,4 +73,4 @@ class PlottingTool3D(PlottingToolBase):
        # self.figure2.set_tight_layout(True)
         #self.figure3.set_tight_layout(True)
         #self.figure4.set_tight_layout(True)
-        plt.tight_layout()
+        #plt.tight_layout()

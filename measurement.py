@@ -9,7 +9,7 @@ from matplotlib.colors import colorConverter
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-from auxilary_functions import wl_to_rgb, bin_data_array, integrate_gaussian
+from auxilary_functions import wl_to_rgb, bin_data_array, integrate_gaussian, gauss
 from file_selector import string_list_editor
 import numpy as np
 import random
@@ -121,7 +121,8 @@ class SpectrumMeasurement(BaseMeasurement):
     color = Property() #Tuple(0.0, 0.0, 0.0)  # Enum(['r', 'g', 'b', 'y', 'g', 'k','m','c','k'])
 
     #####       Calculated Data      #####
-
+    fits = List([])
+    fit_data = Property(Array)
 
     #####       UI      #####
 
@@ -173,6 +174,11 @@ class SpectrumMeasurement(BaseMeasurement):
             return True
         else:
             return False
+    def _get_fit_data(self):
+        data = np.zeros_like(self.signal)
+        data[:, 0] = self.signal[:, 0]
+        for a, m, s in self.fits:
+            data[:, 1] += gauss(data[:, 0], a, m, s)
 
     def _signal_default(self):
         return np.array([])
@@ -211,7 +217,7 @@ class SpectrumMeasurement(BaseMeasurement):
     def norm_bg(self):
         return self.normalize(self.bg)
 
-    def bin_bg(self):
+    def bin_bg(self,bins=None):
         """
 
         :return:
@@ -219,12 +225,13 @@ class SpectrumMeasurement(BaseMeasurement):
         binned = np.asarray([])
         if self.has_bg:
             normed = self.normalize(self.bg)
-            bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
+            if bins is None:
+                bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
             binned = bin_data_array(normed,nbins=bins)
 
         return binned
 
-    def bin_ref(self):
+    def bin_ref(self,bins=None):
         """
 
         :return:
@@ -232,7 +239,8 @@ class SpectrumMeasurement(BaseMeasurement):
         binned = np.asarray([])
         if self.has_ref:
             normed = self.normalize(self.ref)
-            bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
+            if bins is None:
+                bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
             binned = bin_data_array(normed,nbins=bins)
 
         return binned
@@ -242,6 +250,16 @@ class SpectrumMeasurement(BaseMeasurement):
 
     def norm_ref(self):
         return self.normalize(self.ref)
+
+    def bg_corrected(self,normalize=True):
+        if normalize:
+            normed = self.normalize(self.signal)
+        else:
+            normed = self.signal
+        normed[:,1] -= np.resize(self.bg,normed[:,1].shape)
+
+        return normed
+
 
     def bin_data(self,data='bg_corrected'):
         """
@@ -257,12 +275,19 @@ class SpectrumMeasurement(BaseMeasurement):
             normed = self.normalize(self.bg)
         elif data=='ref':
             normed = self.normalize(self.ref)
+        elif data=='fit':
+            normed = np.zeros_like(self.signal)
+            normed[:,0] = self.signal[:,0]
+            for a,m,s in self.fits:
+                normed[:, 1] += gauss(normed[:,0], a, m, s)
+
+
         bins=round(normed[:,0].max())-round(normed[:,0].min())
         binned = bin_data_array(normed,nbins=bins)
 
         if data=='bg_corrected':
             bg = self.bin_bg()
-            binned[:,1] -=  bg[:,1]
+            binned[:,1] -=  np.resize(bg[:,1],binned[:,1].shape)
 
         # print sorted(averaged)
 
@@ -339,13 +364,22 @@ class SpectrumMeasurement(BaseMeasurement):
     def plot_data(self,ax=None,legend=True, data='bg_corrected'):
         if self.has_sig:
             ser = self.create_series(data)
-            ax = ser.plot(color=self.color, legend=legend, ax=ax)
+            axs = ser.plot(color=self.color, legend=legend, ax=ax)
             if ax is not None:
                 ax.set_title(str(self.ex_wl),fontsize=12)
                 ax.set_xlabel('Emission Wavelength')
                 ax.set_ylabel('Counts')
                 #plt.show()
             else:
+                plt.show()
+
+    def plot_fits(self,ax=None,legend=True,xrange=(300,1000)):
+        if len(self.fits):
+            xdata = np.linspace(*xrange,num=200)
+            for a,m,s in self.fits:
+                ser = pd.Series(data=gauss(xdata,a,m,s),index=xdata, name=self.ex_wl)
+                axs = ser.plot(color=self.color, legend=legend, ax=ax)
+            if ax is None:
                 plt.show()
 
     def show_file_data(self):

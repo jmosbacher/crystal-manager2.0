@@ -24,7 +24,7 @@ except:
 from experiment import SpectrumExperiment,BaseExperiment, ExperimentTableEditor
 from measurement import SpectrumMeasurement
 from compare_experiments import ExperimentComparison
-from data_plot_viewers import DataPlotEditorBase
+from data_plot_viewers import DataPlotEditorBase, IntegrationDataPlotEditor
 from integration_results import IntegrationResultBase,ComparisonIntegrationResult, ExperimentIntegrationResult
 
 
@@ -153,7 +153,7 @@ class ComparisonIntegrationTool(IntegrationToolBase):
         self.int_results = project.comp_int_results
 
     def _display_default(self):
-        display = DataPlotEditorBase(nplots=3)
+        display = IntegrationDataPlotEditor()
         # display.add_subplots(3)
         return display
 
@@ -226,7 +226,7 @@ class ExperimentIntegrationTool(IntegrationToolBase):
 
 
     def _display_default(self):
-        display = DataPlotEditorBase(nplots=3)
+        display = IntegrationDataPlotEditor()
         # display.add_subplots(3)
         return display
 

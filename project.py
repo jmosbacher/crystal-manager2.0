@@ -28,6 +28,8 @@ from data_importing import AutoExperimentImportTool, AutoSpectrumImportTool
 from integration_tool import ComparisonIntegrationTool, ExperimentIntegrationTool
 from integration_results import IntegrationResultBase
 from plotting_tool import PlottingTool3D
+from fitting_tool import FittingToolBase
+
 
 class Project(CanSaveMixin):
     main = Any()
@@ -171,6 +173,9 @@ class Project(CanSaveMixin):
         tool = PlottingTool3D(project=self)
         tool.edit_traits()
 
+    def fitting_tool(self):
+        tool = FittingToolBase(project=self)
+        tool.edit_traits()
     #def _import_data_fired(self):
         #self.selected.import_data()
 

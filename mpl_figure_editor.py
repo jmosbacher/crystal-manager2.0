@@ -28,6 +28,10 @@ from traitsui.api import Handler
 class _MPLFigureEditor(Editor):
 
    scrollable  = True
+   frame = Instance(QtGui.QWidget)
+   canvas = Instance(FigureCanvas)
+   toolbar = Instance(NavigationToolbar2QT)
+   vbox = Instance(QtGui.QVBoxLayout)
 
    def init(self, parent):
        self.control = self._create_canvas(parent)
@@ -39,12 +43,13 @@ class _MPLFigureEditor(Editor):
    def _create_canvas(self, parent):
        """ Create the MPL canvas. """
        # matplotlib commands to create a canvas
-       frame = QtGui.QWidget()
-       mpl_canvas = FigureCanvas(self.value)
-       mpl_canvas.setParent(frame)
-       mpl_toolbar = NavigationToolbar2QT(mpl_canvas,frame)
 
-       vbox = QtGui.QVBoxLayout()
+       self.frame = frame = QtGui.QWidget()
+       self.canvas = mpl_canvas = FigureCanvas(self.value)
+       mpl_canvas.setParent(frame)
+       self.toolbar = mpl_toolbar = NavigationToolbar2QT(mpl_canvas,frame)
+
+       self.vbox = vbox = QtGui.QVBoxLayout()
        vbox.addWidget(mpl_canvas)
        vbox.addWidget(mpl_toolbar)
        frame.setLayout(vbox)
