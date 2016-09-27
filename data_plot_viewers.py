@@ -10,6 +10,7 @@ from mpl_figure_editor import MPLFigureEditor, MPLInitHandler
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
+
 class DataPlotEditorBase(HasTraits):
 
     figure = Instance(Figure, ())
@@ -61,12 +62,12 @@ class IntegrationDataPlotEditor(DataPlotEditorBase):
         if len(self.axs):
             self.span = SpanSelector(self.axs[0], self.onselect, 'horizontal', useblit=True,
                              rectprops=dict(alpha=0.5, facecolor='red'))
-
-        self.figure.canvas.draw()
+        if self.figure is not None:
+            self.figure.canvas.draw()
 
     def plot_data(self,data,plot_num,title=' '):
         self.axs[plot_num].plot(data[:,0],data[:,1],)
-        plt.pause(1)
+        #plt.pause(1)
 
     def clear_selections(self):
         self.selections = []
@@ -85,15 +86,16 @@ class IntegrationDataPlotEditor(DataPlotEditorBase):
         self.selections.append((xmin, xmax))
         for ax in self.axs:
             self.axvspn.append(ax.axvspan(xmin, xmax, color='red', alpha=0.4))
-        self.figure.canvas.draw()
+        if self.figure is not None:
+            self.figure.canvas.draw()
 
     def redraw_selections(self):
         self.axvspn=[]
         for xmin,xmax in self.selections:
             for ax in self.axs:
                 self.axvspn.append(ax.axvspan(xmin, xmax, color='red', alpha=0.4))
-
-        self.figure.canvas.draw()
+        if self.figure is not None:
+            self.figure.canvas.draw()
 
     def mpl_setup(self):
         if len(self.axs) != self.nplots:

@@ -16,7 +16,7 @@ import random
 import pandas as pd
 from measurement import BaseMeasurement, SpectrumMeasurement, MeasurementTableEditor, ArrayViewer
 from data_importing import AutoSpectrumImportTool
-from auxilary_functions import merge_spectrums, pad_with_zeros
+from auxilary_functions import merge_spectrums, pad_with_zeros, gaussian_integral
 from scipy.interpolate import griddata
 try:
     import cPickle as pickle
@@ -167,11 +167,14 @@ class SpectrumExperiment(BaseExperiment):
             return False
 
     def _get_fits_list(self):
+        def keyf(data):
+            return data[0],data[2]
         fits = []
         for meas in self.measurements:
+            #
             if len(meas.fits):
-                fits.extend([[meas.ex_wl,a,m,s] for a,m,s in meas.fits])
-        return np.asarray(fits)
+                fits.extend([[meas.ex_wl, a,m,s, gaussian_integral(meas.ex_wl, 1000, a, m, s, meas.resolution)] for a,m,s in meas.fits])
+        return np.asarray(sorted(fits,key=keyf))
 
     def _sort_by_wl_fired(self):
         def wl(spectrum):

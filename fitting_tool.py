@@ -159,10 +159,12 @@ class FittingToolBase(HasTraits):
                 Group(Item(name='experiments', show_label=False, editor=ExperimentTableEditor(selected='selected')),
                       show_border=True, label='Experiments'),
                 Group(Item(name='fits_list', show_label=False, editor=ArrayViewEditor(
-                                                                titles = [ 'Wavelength', 'Amplitude','Mean', 'Sigma' ],
+                                                                titles = [ 'Wavelength', 'Amplitude','Mean',
+                                                                           'Sigma', 'Integral', ],
                                                                 format = '%g',
+
                                                                 show_index= False,)),
-                      show_border=True, label='Fits'),
+                      show_border=True, label='Fits',scrollable=True),
 
             ),
 
@@ -187,7 +189,7 @@ class FittingToolBase(HasTraits):
         return FittingDataPlotEditor()
 
     def _fits_list_default(self):
-        return np.asarray([[0.0,0.0,0.0,0.0]])
+        return np.asarray([[0.0,0.0,0.0,0.0, 0.0]])
 
 
     def _perform_fit_fired(self):

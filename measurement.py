@@ -123,6 +123,7 @@ class SpectrumMeasurement(BaseMeasurement):
     #####       Calculated Data      #####
     fits = List([])
     fit_data = Property(Array)
+    resolution = Property()
 
     #####       UI      #####
 
@@ -159,6 +160,9 @@ class SpectrumMeasurement(BaseMeasurement):
             return True
         else:
             return False
+
+    def _get_resolution(self):
+        return np.mean(np.diff(self.signal[:,0]))
 
     def _get_color(self):
         return wl_to_rgb(self.ex_wl)
@@ -256,7 +260,7 @@ class SpectrumMeasurement(BaseMeasurement):
             normed = self.normalize(self.signal)
         else:
             normed = self.signal
-        normed[:,1] -= np.resize(self.bg,normed[:,1].shape)
+        normed[:,1] -= np.resize(self.bg[:,1],normed[:,1].shape)
 
         return normed
 

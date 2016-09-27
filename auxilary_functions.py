@@ -181,6 +181,11 @@ def fit_sum_of_gaussians(x,f, ranges):
 def gauss(x, a, mean, sigma):
     return a * np.exp(-(x - mean) ** 2 / (2 * sigma**2))
 
+def gaussian_integral(xmin, xmax, a, mean, sigma, resolution):
+    xdata = np.arange(xmin,xmax,resolution)
+
+    return np.sum(gauss(xdata,a,mean,sigma))
+
 def integrate_gaussian(x,f):
 
     res = np.mean(np.diff(x))
