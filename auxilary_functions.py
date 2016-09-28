@@ -177,6 +177,15 @@ def fit_sum_of_gaussians(x,f, ranges):
         pcov = None
     return gaussians,p, pcov
 
+def twoD_Gaussian((x, y), amplitude, xo, yo, sigma_x, sigma_y, theta):
+    xo = np.float(xo)
+    yo = np.float(yo)
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo)
+                            + c*((y-yo)**2)))
+    return g.ravel()
 
 def gauss(x, a, mean, sigma):
     return a * np.exp(-(x - mean) ** 2 / (2 * sigma**2))

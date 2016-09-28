@@ -21,7 +21,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
-from experiment import SpectrumExperiment,BaseExperiment, ExperimentTableEditor
+from experiment import SpectrumExperiment,BaseExperiment, ExperimentNameTableEditor
 from measurement import SpectrumMeasurement
 from compare_experiments import ExperimentComparison
 from data_plot_viewers import DataPlotEditorBase, IntegrationDataPlotEditor
@@ -48,6 +48,17 @@ class IntegrationToolBase(HasTraits):
 
     view = View(
         HSplit(
+
+            VGroup(
+                Group(Item(name='experiments', show_label=False,editor=ExperimentNameTableEditor(selected='selected')),
+                      show_border=True, label='Data'),
+                VGroup(Item(name='save', show_label=False, ),
+                    Item(name='int_results', show_label=False,style='custom',
+                           editor=ListEditor(use_notebook=True,deletable=True,page_name='.name'),),
+                      show_border=True, label='Integration Results'),
+
+            ),
+
             VGroup(
                 HGroup(Item(name='select_range', show_label=False, ),
                        Item(name='integrate', show_label=False, ),
@@ -56,24 +67,10 @@ class IntegrationToolBase(HasTraits):
                        spring,
                        Item(name='refresh', show_label=False),
                        show_border=True, label='Control'),
-                Group(Item(name='display', style='custom',show_label=False),
+                Group(Item(name='display', style='custom', show_label=False),
                       show_border=True, label='Plots'),
 
             ),
-
-            VGroup(
-                Group(Item(name='experiments', show_label=False,editor=ExperimentTableEditor(selected='selected')),
-                      show_border=True, label='Data'),
-                VGroup(Item(name='save', show_label=False, ),
-                    Item(name='int_results', show_label=False,style='custom',
-                           editor=ListEditor(use_notebook=True,deletable=True,page_name='.name'),),
-                      show_border=True, label='Integration Results'),
-
-
-
-
-            ),
-
             ),
     buttons = ['OK'],
     title = 'Comparison Integration Tool',

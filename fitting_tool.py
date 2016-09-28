@@ -3,108 +3,14 @@ from traitsui.api import *
 from traitsui.ui_editors.array_view_editor import ArrayViewEditor
 from data_plot_viewers import DataPlotEditorBase
 import matplotlib.pyplot as plt
-from experiment import SpectrumExperiment,BaseExperiment, ExperimentTableEditor
+from experiment import SpectrumExperiment,BaseExperiment, ExperimentNameTableEditor
 from measurement import SpectrumMeasurement
 from compare_experiments import ExperimentComparison
 from data_plot_viewers import FittingDataPlotEditor
 import numpy as np
 from scipy.optimize import curve_fit
+from fitters import SpectrumFitter1D
 
-
-class SpectrumFitter(HasTraits):
-
-    xdata = Array()
-    ydata = Array()
-    peaks = List()
-    normalize = Bool(False)
-    posdef = Bool(True)
-    nbins = Int(0)
-
-    nexp = Property(Int)
-    fit_fcn = Property(Function)
-
-
-    p = Array()
-    pcov = Array()
-
-    fit_y = Property(Array)
-    fit_success = Bool(True)
-    #def __init__(self,):
-        #super(SpectrumFitter, self).__init__()
-
-    ####       GUI     ####
-    fit_data = Button('Fit Data')
-    view = View(
-
-
-    )
-
-    def _get_fit_fcn(self):
-        N = self.nexp
-        def gaussians(x, *p):
-            if p is None:
-                return np.zeros_like(x)
-            params = np.asarray(p).reshape(N,3)
-            return np.sum([a * np.exp(-(x - m) ** 2 / (2 * s**2)) for a,m,s in params],axis=0)
-        return gaussians
-
-    def _get_fit_y(self):
-        self.perform_fit()
-        return self.fit_fcn(self.xdata,self.p)
-
-    def _get_nexp(self):
-        return len(self.peaks)
-
-    def perform_fit(self):
-
-        if self.nbins:
-            xdata = np.mean(np.array_split(self.xdata, self.nbins,axis=0), axis=1)
-            ydata = np.mean(np.array_split(self.ydata, self.nbins, axis=0), axis=1)
-        else:
-            xdata, ydata = self.xdata, self.ydata
-
-        if self.normalize:
-            ydata = ydata/np.mean(np.diff(xdata))
-
-        p0 = []
-        for xmin, xmax in self.peaks:
-            p0.append(ydata[np.where(np.logical_and(xdata<=xmax, xdata>=xmin))].max())
-            p0.append((xmax+xmin)/2.0)
-            p0.append((xmax-xmin)/2.0)
-        try:
-            if self.posdef:
-                bnds = (0, np.inf)
-            else:
-                bnds = (-np.inf, np.inf)
-            self.p, self.pcov = curve_fit(self.fit_fcn, xdata, ydata, p0=p0, bounds=bnds)
-            self.fit_success = True
-        except:
-            self.fit_success = False
-            self.p, self.pcov = [[0.0,0.0,1.0]]*2
-
-
-    def plot_data(self, title=' ', figure=None, axs = None, titlesize=12):
-        if figure is None:
-            fig = plt.figure()
-        else:
-            fig = figure
-        if axs is None:
-            ax = fig.add_subplot(111)
-        else:
-            ax = axs
-
-        ax.plot(self.xdata, self.fit_y, '--',label='Fit')
-        ax.plot(self.xdata, self.ydata, '.',label='Data')
-
-        ax.set_title(title, fontsize=titlesize)
-        ax.set_xlabel('Emission Wavelength')
-        ax.set_ylabel('Counts')
-        legend = ax.legend(shadow=True)
-
-        if figure is None:
-            plt.show()
-        else:
-            fig.canvas.draw()
 
 
 class FittingToolBase(HasTraits):
@@ -138,7 +44,7 @@ class FittingToolBase(HasTraits):
             VGroup(
                 HGroup(
                         Item(name='perform_fit', show_label=False, ),
-                        Item(name='integrate', show_label=False, ),
+                        #Item(name='integrate', show_label=False, ),
                        #Item(name='use_fit', label='Fit Data', ),
                         Item(name='message', style='readonly', show_label=False,springy=True),
                        show_border=True, label='Control'),
@@ -156,7 +62,7 @@ class FittingToolBase(HasTraits):
             ),
 
             VGroup(
-                Group(Item(name='experiments', show_label=False, editor=ExperimentTableEditor(selected='selected')),
+                Group(Item(name='experiments', show_label=False, editor=ExperimentNameTableEditor(selected='selected')),
                       show_border=True, label='Experiments'),
                 Group(Item(name='fits_list', show_label=False, editor=ArrayViewEditor(
                                                                 titles = [ 'Wavelength', 'Amplitude','Mean',
@@ -207,7 +113,7 @@ class FittingToolBase(HasTraits):
         for xmin,xmax in self.display.peaks:
             if xmax-xmin>1:
                 peaks.append((xmin,xmax))
-        fitter = SpectrumFitter(peaks=peaks)
+        fitter = SpectrumFitter1D(peaks=peaks)
         xrange = self.display.xrange
         for meas in self.selected.measurements:
             data = meas.bg_corrected()
@@ -277,21 +183,3 @@ class FittingToolBase(HasTraits):
             self.display.axs[1].set_ylabel('Counts')
 
 
-#### Unit Tests ####
-
-if __name__=='__main__':
-    N = 2
-    def gaussians(x, *p):
-        if p is None:
-            return np.zeros_like(x)
-        params = np.asarray(p).reshape(N, 3)
-        # if N == 1:
-        # return p[0]* np.exp(-(x - p[1]) ** 2 / (2 * p[2]))
-        return np.sum([a*np.exp(-(x - m)** 2/(2*s)) for a, m, s in params], axis=0)
-
-    xdata = np.linspace(0, 10, 1000)
-    y = gaussians(xdata,[5.5, 1.3, 0.8,4.0, 6.0, 1.7] )
-    ydata = y + 0.3 * np.random.normal(size=len(xdata))
-
-    fitter = SpectrumFitter(xdata=xdata, ydata=ydata, peaks=[(0.5,2.5), (5.0, 6.5)],normalize=False, nbins=0)
-    fitter.plot_data()

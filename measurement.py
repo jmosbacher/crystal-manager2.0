@@ -14,6 +14,7 @@ from file_selector import string_list_editor
 import numpy as np
 import random
 import pandas as pd
+from pandas.tools.plotting import lag_plot, autocorrelation_plot
 try:
     import cPickle as pickle
 except:
@@ -202,15 +203,39 @@ class SpectrumMeasurement(BaseMeasurement):
         if self.has_ref:
             self.ref[:, 1] *= scale
 
-    def create_series(self,data='bg_corrected'):
+    def create_series(self,data='bg_corrected',bin=False, nbins=0, round_wl=False):
         """
 
         :return:
         """
+        normed = np.zeros((1, 2))
+        if not self.has_sig:
+            return normed
 
-        sig = self.bin_data(data)
+        if data in ['bg_corrected', 'signal']:
+            normed = self.normalize(self.signal)
+        elif data == 'bg':
+            normed = self.normalize(self.bg)
+        elif data == 'ref':
+            normed = self.normalize(self.ref)
+        elif data == 'fit':
+            normed = np.zeros_like(self.signal)
+            normed[:, 0] = self.signal[:, 0]
+            for a, m, s in self.fits:
+                normed[:, 1] += gauss(normed[:, 0], a, m, s)
+        if bin:
+            if nbins:
+                bins=nbins
+            else:
+                bins = round(normed[:, 0].max()) - round(normed[:, 0].min())
 
-        return pd.Series(sig[:, 1], index=sig[:, 0], name=self.ex_wl)
+            normed = bin_data_array(normed,nbins=bins)
+        if round_wl:
+            indx = np.around(normed[:, 0],decimals=1)
+        else:
+            indx = normed[:, 0]
+
+        return pd.Series(data=normed[:, 1], index=indx, name=self.ex_wl)
 
     def normalize(self,data):
         #return data
@@ -385,6 +410,45 @@ class SpectrumMeasurement(BaseMeasurement):
                 axs = ser.plot(color=self.color, legend=legend, ax=ax)
             if ax is None:
                 plt.show()
+
+    def plot_histogram(self,ax=None,legend=True, data='bg_corrected',nbins=50, alpha=0.5):
+        if not self.has_sig:
+            return
+        ser = self.create_series(data=data)
+        axs = ser.hist(color=self.color, legend=legend, ax=ax, bins=nbins, alpha=alpha)
+
+        if ax is None:
+            plt.show()
+
+    def plot_kde(self,ax=None,legend=True, data='bg_corrected', alpha=0.5):
+        if not self.has_sig:
+            return
+
+        ser = self.create_series(data=data)
+        axs = ser.plot.kde(color=self.color, legend=legend, ax=ax, alpha=alpha)
+
+        if ax is None:
+            plt.show()
+
+    def plot_lag(self,ax=None,legend=True,lag=1, data='bg_corrected'):
+        if not self.has_sig:
+            return
+
+        ser = self.create_series(data=data)
+        axs = lag_plot(ser, lag=lag, color=self.color, legend=legend, ax=ax)
+
+        if ax is None:
+            plt.show()
+
+    def plot_autocorrelation(self,ax=None,legend=True, data='bg_corrected'):
+        if not self.has_sig:
+            return
+
+        ser = self.create_series(data=data)
+        axs = autocorrelation_plot(ser, color=self.color, legend=legend, ax=ax)
+
+        if ax is None:
+            plt.show()
 
     def show_file_data(self):
         viewer = FileDataViewer()

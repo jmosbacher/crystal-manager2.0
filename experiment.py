@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from matplotlib import cm
+import matplotlib
+matplotlib.style.use('ggplot')
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from auxilary_functions import wl_to_rgb
 import numpy as np
@@ -18,11 +20,30 @@ from measurement import BaseMeasurement, SpectrumMeasurement, MeasurementTableEd
 from data_importing import AutoSpectrumImportTool
 from auxilary_functions import merge_spectrums, pad_with_zeros, gaussian_integral
 from scipy.interpolate import griddata
+from saving import BaseSaveHandler
+from pyface.api import FileDialog, confirm, error, YES, CANCEL
 try:
     import cPickle as pickle
 except:
     import pickle
 
+class ExperimentBaseHandler(BaseSaveHandler):
+    #extension = Str('int')
+    promptOnExit = False
+
+    def object_export_data_changed(self, info):
+        fileDialog = FileDialog(action='save as', title='Save As',
+                                wildcard=self.wildcard,
+                                parent=info.ui.control,
+                                default_filename=info.object.name)
+        if info.object.export_format=='Clipboard':
+            info.object.save_pandas()
+        else:
+            fileDialog.open()
+            if fileDialog.path == '' or fileDialog.return_code == CANCEL:
+                return False
+            else:
+                info.object.save_pandas(fileDialog.path)
 
 class BaseExperiment(HasTraits):
     __kind__ = 'Base'
@@ -62,6 +83,10 @@ class SpectrumExperiment(BaseExperiment):
     sort_by_wl = Button('Sort by WL')
     auto_merge = Button('Merge by WL')
 
+    export_data = Button('Export')
+    export_format = Enum('Clipboard',['CSV', 'Text', 'Excel','Latex','Clipboard'])
+    export_binned = Bool(True)
+
     scale = Float(1)
     scale_what = Enum('Selected',['All','Selected'])
     rescale = Button('Rescale')
@@ -98,6 +123,12 @@ class SpectrumExperiment(BaseExperiment):
                     Item(name='rescale', show_label=False),
                   ),
             HGroup(
+                Item(name='export_data', show_label=False),
+                Item(name='export_format', label='Format'),
+                Item(name='export_binned', label='Bin Data'),
+
+                show_border=True, label='Export Data'),
+            HGroup(
                 Item(name='plot_3d_select', label='3D Plot Type' ),
                 Item(name='plot_3d', show_label=False, ),
                 Item(name='show_binned', show_label=False, enabled_when='selected'),
@@ -118,6 +149,7 @@ class SpectrumExperiment(BaseExperiment):
             show_border=True, label='Measurements'),
         title='Experiment Editor',
         buttons=['OK'],
+        handler=ExperimentBaseHandler(),
         kind='nonmodal',
         scrollable=True,
         resizable=True,
@@ -299,16 +331,28 @@ class SpectrumExperiment(BaseExperiment):
         with open(path, 'rb') as f:
             self.measurements = pickle.load(f)
 
-    def make_dataframe(self):
+    def make_dataframe(self,bin_data=False,round_wl=False):
         data = {}
-        for exp in self.measurements:
-            data[exp.ex_wl] = exp.create_series()
+        for meas in self.measurements:
+            data[meas.ex_wl] = meas.create_series(bin=bin_data,round_wl=round_wl)
         return pd.DataFrame(data)
 
-    def save_pandas(self,path):
-        df = self.make_dataframe()
-        result = df.to_csv(path)
-        return result
+    def save_pandas(self,path=None, format=None):
+        df = self.make_dataframe(bin_data=self.export_binned,round_wl=True)
+        functions = {
+                    'CSV':df.to_csv, 'Text':df.to_string, 'Excel':df.to_excel, 'Latex':df.to_latex,
+        }
+        if format is None:
+            fmt = self.export_format
+        else:
+            fmt = format
+        if fmt=='Clipboard' or (path is None):
+            df.to_clipboard()
+            return
+        else:
+            df.functions[fmt](path)
+            return
+
 
     def plot_1d(self,kind='Spectrum',axs=[None]*3,title='',legend=True):
         if None in axs:
@@ -410,6 +454,23 @@ class SpectrumExperiment(BaseExperiment):
         exem = np.concatenate(exem, axis=0)
         return exem,cnts
 
+    def collect_XYZ_arrays(self, bin_data=False):
+        xs, ys, zs = [], [], []
+
+        for meas in self.measurements:
+            ex_wl = meas.ex_wl
+            if bin_data:
+                em_spectrum = meas.bin_data()
+            else:
+                em_spectrum = meas.bg_corrected()
+            xs.append( np.full(len(em_spectrum), ex_wl) )
+            ys.append( em_spectrum[:, 0] )
+            zs.append(em_spectrum[:, 1])
+
+        Z = np.concatenate(zs, axis=0)
+        X, Y = np.concatenate(xs, axis=0), np.concatenate(ys, axis=0)
+        return X,Y,Z
+
     def make_meshgrid(self,step=1):
         exem, cnts = self.collect_3d_coordinates()
         ex_min, ex_max = exem[:,0].min(), exem[:,0].max()
@@ -496,9 +557,9 @@ class SpectrumExperiment(BaseExperiment):
 
         X, Y, Z = self.make_meshgrid()
         ax.plot_surface(X, Y, Z, rstride=rstride, cstride=cstride, alpha=alpha)
-        cset = ax.contourf(X, Y, Z, zdir='z', offset=Z.min()-Z.max()/2, cmap=cmx.coolwarm)
-        cset = ax.contourf(X, Y, Z, zdir='x', offset=X.min()-30, cmap=cmx.coolwarm)
-        cset = ax.contourf(X, Y, Z, zdir='y', offset=Y.max()+30, cmap=cmx.coolwarm)
+        cset1 = ax.contourf(X, Y, Z, zdir='z', offset=Z.min()-Z.max()/2, cmap=cmx.coolwarm)
+        cset2 = ax.contourf(X, Y, Z, zdir='x', offset=X.min()-30, cmap=cmx.coolwarm)
+        cset3 = ax.contourf(X, Y, Z, zdir='y', offset=Y.max()+30, cmap=cmx.coolwarm)
         ax.yaxis._axinfo['label']['space_factor'] = 2.8
         ax.set_xlabel('Excitation Wavelength')
         ax.set_xlim(X.min()-30, X.max()+30)
@@ -582,3 +643,15 @@ class ExperimentTableEditor(TableEditor):
     sortable = False
     editable = True
 
+class ExperimentNameTableEditor(TableEditor):
+
+    columns = [
+                CheckboxColumn(name='is_selected', label='', width=0.08, horizontal_alignment='center', ),
+                ObjectColumn(name = 'name',label = 'Name',width = 0.25,horizontal_alignment = 'left',editable=True),
+                ObjectColumn(name='crystal_name', label='Crystal', width=0.25, horizontal_alignment='left', editable=True),
+
+              ]
+
+    auto_size = True
+    sortable = False
+    editable = False

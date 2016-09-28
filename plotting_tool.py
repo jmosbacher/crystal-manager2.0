@@ -19,7 +19,7 @@ class PlottingToolBase(HasTraits):
     figure2 = Instance(Figure, ())
     figure3 = Instance(Figure, ())
     figure4 = Instance(Figure, ())
-    #plot_selected = Button('Plot Selected')
+    plot_selected = Button('Plot Selected')
 
 
 class PlottingTool3D(PlottingToolBase):
@@ -27,6 +27,7 @@ class PlottingTool3D(PlottingToolBase):
         HSplit(
             Item(name='experiments', show_label=False, editor=ExperimentTableEditor(selected='selected'), width=0.3),
             VGroup(
+                Item(name='plot_selected', show_label=False),
                 HGroup(
                     Group(Item('figure1', editor=MPLFigureEditor(), show_label=False),
                           show_border=True, label='Wire Plot'),
@@ -58,7 +59,7 @@ class PlottingTool3D(PlottingToolBase):
         self.figure3.patch.set_facecolor('none')
         self.figure4.patch.set_facecolor('none')
 
-    def _selected_changed(self):
+    def _plot_selected_fired(self):
         self.figure1.clf()
         self.figure2.clf()
         self.figure3.clf()

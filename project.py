@@ -53,7 +53,7 @@ class Project(CanSaveMixin):
     add_new = Button('New Experiment')
     #import_data = Button('Add Measurements')
     remove = Button('Remove')
-    edit = Button('Edit')
+    edit = Button('Open')
     merge = Button('Merge')
     select_all = Button('Select All')
     unselect_all = Button('Un-select All')
