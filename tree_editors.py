@@ -35,14 +35,12 @@ project_tree_editor = TreeEditor(
                  auto_open=True,
                  children='projects',
                  label='name',
-                 view=View(Group('name',
-                                 orientation='vertical',
-                                 show_left=True))),
+                 ),
 
         TreeNode(node_for=[Project],
                  auto_open=True,
                  children='experiments',
-                 label='=Experiments',
+                 label='name',
 
                  add=[SpectrumExperiment]),
 
@@ -58,7 +56,9 @@ project_tree_editor = TreeEditor(
                  label='name',
 
                                 )
-    ]
+    ],
+    editable=False,
+    selected='selected'
 
 )
 
@@ -73,19 +73,30 @@ project_tree_editor = TreeEditor(
                            Separator(),
                            RenameAction),
 '''
-### Unit Tests ###
 
 
-
-class Blah(HasTraits):
+class Test(HasTraits):
     workspace = Instance(WorkSpace)
+    selected = Instance(HasTraits)
+    view = View(
+        HSplit(
+        Item('workspace',editor=project_tree_editor,show_label=False,width=0.2),
 
-    view = View(Item('workspace',editor=project_tree_editor))
+
+    Group(Item(name='selected',style='custom',show_label=False))),
+
+    title = 'Tree Test',
+    resizable = True,
+    height = 800,
+    width = 1200,
+    #scrollable = True,
+    )
 
     def _workspace_default(self):
         work = WorkSpace()
         projects = [Project(name='Project 1'), Project(name='Project 2'), Project(name='Project 3')]
-        for project in projects:
+        for n, project in enumerate(projects):
+            project.name = 'Project '+str(n)
             for name in ['Exp 1', 'Exp 2', 'Exp 3']:
                 exp = project.add_new_experiment()
                 exp.name = name
@@ -95,5 +106,6 @@ class Blah(HasTraits):
         work.projects = projects
         return work
 
-test = Blah()
-test.configure_traits()
+if __name__=='__main__':
+    test = Test()
+    test.configure_traits()

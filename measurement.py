@@ -28,8 +28,8 @@ class ArrayViewer(HasTraits):
     view = View(
         Item('data',
               show_label = False,
-              editor     = ArrayViewEditor(titles = [ 'Wavelength', 'Counts' ],
-                                           format = '%.2f',
+              editor     = ArrayViewEditor(titles = [ 'Wavelength', 'Counts'],
+                                           format = '%g',
                                            show_index= False,
                                            # Font fails with wx in OSX;
                                            #   see traitsui issue #13:
@@ -145,6 +145,7 @@ class SpectrumMeasurement(BaseMeasurement):
                 Item(name='color', label='Plot Color'),
                 show_border=True, label='Emission'),
 
+
         ),
 
     )
@@ -179,11 +180,14 @@ class SpectrumMeasurement(BaseMeasurement):
             return True
         else:
             return False
+
     def _get_fit_data(self):
         data = np.zeros_like(self.signal)
         data[:, 0] = self.signal[:, 0]
         for a, m, s in self.fits:
             data[:, 1] += gauss(data[:, 0], a, m, s)
+
+
 
     def _signal_default(self):
         return np.array([])

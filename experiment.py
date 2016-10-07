@@ -113,8 +113,11 @@ class SpectrumExperiment(BaseExperiment):
                     Item(name='remove', show_label=False,enabled_when='selected'),
                     Item(name='sort_by_wl', show_label=False),
                     Item(name='merge', show_label=False),
-                    Item(name='plot_selected', show_label=False, enabled_when='selected'),
+
                     Item(name='auto_merge', show_label=False,),
+            ),
+            HGroup(
+
                     Item(name='show_file_data', show_label=False, enabled_when='selected'),
                     #Item(name='add_type', show_label=False),
                     Item(name='add_meas', show_label=False),
@@ -129,6 +132,7 @@ class SpectrumExperiment(BaseExperiment):
 
                 show_border=True, label='Export Data'),
             HGroup(
+                Item(name='plot_selected', show_label=False, enabled_when='selected'),
                 Item(name='plot_3d_select', label='3D Plot Type' ),
                 Item(name='plot_3d', show_label=False, ),
                 Item(name='show_binned', show_label=False, enabled_when='selected'),
